@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a77395fc2b37afa42974b3b53ed12707, type: 3}
+  m_Name: Camera Tools
+  m_EditorClassIdentifier: 
+  Resetter: {fileID: 11400000, guid: 92209a2bb4cae384cbdc43a8edcff1c2, type: 2}
+  Smoother: {fileID: 11400000, guid: 577bd97b86859ba49865deeaf9068c63, type: 2}
+  FOVController: {fileID: 11400000, guid: fb6a9cad1b4d4484da53ef271a02e6cc, type: 2}
+  Compensate: {fileID: 11400000, guid: 7da1dbb9b4532ca49aaf9f3490e011db, type: 2}
