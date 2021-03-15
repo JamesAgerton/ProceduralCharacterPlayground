@@ -199,7 +199,6 @@ namespace ProceduralCharacter.Animation
             {
                 float currentHeight = _strideBounceCurve.Evaluate(_measurements.StrideFraction * 2f % 1f) *
                     _strideSpeedCurve.Evaluate(_measurements.SpeedFraction);
-                Debug.Log(currentHeight);
 
                 Vector3 bounce = new Vector3(0f, currentHeight * _bounceHeight, 0f);
                 _XFormTurnPivot.localPosition = Vector3.SmoothDamp(_XFormTurnPivot.localPosition, bounce,
