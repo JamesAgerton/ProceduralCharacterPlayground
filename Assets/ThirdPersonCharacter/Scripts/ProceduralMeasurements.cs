@@ -1,7 +1,39 @@
 ﻿/* ProceduralMeasurements: James Agerton 2021
  * 
- * This script does the calculations that are used in the ProceduralAnimation script. It also
- * exposes several useful values that could be used elsewhere.
+ * Description: 
+ *      This script makes a large number of measurements intended to be used by other scripts.
+ * 
+ * Dependencies: 
+ *      Rigidbody: The physics component of the gameobject.
+ *               
+ * Variables:   
+ *      _velocityLimit:         Minimum velocity to consider in calculations.
+ *      _accelerationFilter:    Filter value for smoothing Acceleration measurement.
+ *      _maxAccelerationScale:  Used for clamping acceleration measurement to a max scale, calculations that use it won't
+ *                                  be given values beyond that maximum.
+ *      _runStrideRadius:       The size of the stride wheel used to determine the stride length during max speeds.
+ *      _walkStrideRadius:      The size of the stride wheel used to determine the stride length during minimum speeds.
+ *      _runSpeed:              The maximum speed the character runs, should match a speed set by the MovementController.
+ *      _groundDistance:        Radius of the sphere used to check if the character is grounded.
+ *      _ground:                Layermask indicating the ground, used to check if the character is grounded.
+ *              
+ * Properties:
+ *      IsGrounded (bool):                      Bool indicating if the gameobject is touching the ground.
+ *      Velocity (Vector3):                     Vector3 of the velocity as measured by this script.
+ *      VelocityFlat (Vector3):                 The flattened velocity vector, the y value has been set to 0.
+ *      VelocityDirection (Vector3):            The normalized velocity vector.
+ *      Acceleration (Vector3):                 The acceleration vector measured with the fixedDeltaTime. Instantaneous acceleration
+ *                                                  isn't exactly real, but this is pretty close. The value is filtered to reduce
+ *                                                  noise.
+ *      AccelerationFlat (Vector3):             The flattened acceleration vector, same as above except the y value is set to 0.
+ *      AccelerationDirection (Vector3):        The direction of the acceleration vector.
+ *      AccelerationFlatDirection (Vector3):    The direction of the flat acceleration vector.
+ *      AccelerationMagnitude (float):          The magnitude of the acceleration vector.
+ *      AccelerationFlatMagnitude (float):      The magnitude of the flat acceleration vector.
+ *      StrideFraction (float):                 The fraction of the stride wheel that the character is currently at.
+ *      SpeedFraction (float):                  The fraction of the maximum speed, used to blend between the two stride wheel sizes.
+ *      CurrentStrideRadius (float):            The radius of the current stride wheel.
+ *      StrideCircumference (float):            The circumference of the current stride wheel.
  */
 
 using UnityEngine;
@@ -15,22 +47,24 @@ namespace ProceduralCharacter.Animation
         #region Variables(Private)
         private Rigidbody _body;
 
-        [SerializeField]
-        private float VelocityLimit = 0.1f;
-        [SerializeField]
-        private float AccFilter = 5f;
-        [SerializeField]
-        private float _maxAccScale = 5f;
-        [SerializeField]
+        [SerializeField, Tooltip("Minimum velocity to use in calculations.")]
+        private float _velocityLimit = 0.1f;
+        [SerializeField, Tooltip("Filter value for smoothing Acceleration measurement.")]
+        private float _accelerationFilter = 5f;
+        [SerializeField, Tooltip("Used for clamping acceleration measurement to a max scale.")]
+        private float _maxAccelerationScale = 5f;
+        [SerializeField, Tooltip("The size of the stride wheel used to determine the stride length during max speeds.")]
         private float _runStrideRadius = 1.25f;
-        [SerializeField]
+        [SerializeField, Tooltip("The size of the stride wheel used to determine the stride length during minimum speeds.")]
         private float _walkStrideRadius = 0.25f;
-        [SerializeField]
-        private float _runSpeed = 8f;   //Velocity magnitude when wheel should be at its largest
-        [SerializeField]
-        private float groundDistance = 0.5f;
-        [SerializeField]
-        public LayerMask Ground;
+        [SerializeField, Tooltip("")]
+        private float _minSpeed = 2.5f;
+        [SerializeField, Tooltip("The maximum speed the character runs, should match a speed set by the MovementController.")]
+        private float _maxSpeed = 8f;   //Velocity magnitude when wheel should be at its largest
+        [SerializeField, Tooltip("Radius of the sphere used to check if the character is grounded.")]
+        private float _groundDistance = 0.5f;
+        [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
+        public LayerMask _ground;
 
         private bool _isGrounded = false;
 
@@ -49,6 +83,7 @@ namespace ProceduralCharacter.Animation
 
         private float _strideAngle = 0f;
         private float _strideFraction = 0f;
+        private float _refSpeedFractionVelocity = 0f;
         private float _speedFraction = 0f;  //fraction used to transition stride wheel radius based on speed
         private float _currentStrideRadius = 1f;
         private float _strideCircumference = 0f;
@@ -82,7 +117,7 @@ namespace ProceduralCharacter.Animation
         void Update()
         {
             _isGrounded = Physics.CheckSphere(transform.position,
-                groundDistance, Ground, QueryTriggerInteraction.Ignore);
+                _groundDistance, _ground, QueryTriggerInteraction.Ignore);
 
             //Find velocity direction and flatten vector
             CalculateVelocity();
@@ -105,7 +140,7 @@ namespace ProceduralCharacter.Animation
             {
                 Gizmos.color = Color.magenta;
             }
-            Gizmos.DrawWireSphere(transform.position, groundDistance);
+            Gizmos.DrawWireSphere(transform.position, _groundDistance);
 
             //Draw Velocity Direction
             Gizmos.color = Color.green;
@@ -154,7 +189,7 @@ namespace ProceduralCharacter.Animation
             _velocity = _body.velocity;
             _velocityFlat = _body.velocity;
             _velocityFlat.y = 0;
-            if (_velocityFlat.magnitude > VelocityLimit)
+            if (_velocityFlat.magnitude > _velocityLimit)
             {
                 _velocityDirection = Vector3.Normalize(_velocityFlat);
             }
@@ -167,11 +202,11 @@ namespace ProceduralCharacter.Animation
             _accelerationFlat = (_velocityFlat - _lastVelocityFlat) / Time.fixedDeltaTime;
             _lastVelocityFlat = _velocityFlat;
             //Smooth that shaky shit
-            _accelerationDirection = Vector3.Lerp(_acceleration, _accelerationDirection, AccFilter * Time.fixedDeltaTime);
-            _accelerationFlatDirection = Vector3.Lerp(_accelerationFlat, _accelerationFlatDirection, AccFilter * Time.fixedDeltaTime);
+            _accelerationDirection = Vector3.Lerp(_acceleration, _accelerationDirection, _accelerationFilter * Time.fixedDeltaTime);
+            _accelerationFlatDirection = Vector3.Lerp(_accelerationFlat, _accelerationFlatDirection, _accelerationFilter * Time.fixedDeltaTime);
             //rescale?
-            _accelerationMagnitude = Mathf.Clamp(_accelerationDirection.magnitude, 0, _maxAccScale) / _maxAccScale;
-            _accelerationFlatMagnitude = Mathf.Clamp(_accelerationFlatDirection.magnitude, 0, _maxAccScale) / _maxAccScale;
+            _accelerationMagnitude = Mathf.Clamp(_accelerationDirection.magnitude, 0, _maxAccelerationScale) / _maxAccelerationScale;
+            _accelerationFlatMagnitude = Mathf.Clamp(_accelerationFlatDirection.magnitude, 0, _maxAccelerationScale) / _maxAccelerationScale;
         }
 
         private void CalculateStrideWheel()
@@ -182,7 +217,15 @@ namespace ProceduralCharacter.Animation
             //is currently pointed directly down
 
             //calculate which radius to use based on current velocity
-            _speedFraction = Mathf.Clamp(_velocityFlat.magnitude / _runSpeed, 0f, 1f);
+            float SpeedTarget = 0f;
+            if(_velocityFlat.magnitude > _minSpeed)
+            {
+                SpeedTarget = Mathf.Clamp(_velocityFlat.magnitude / _maxSpeed, 0f, 1f);
+            }else if(_velocityFlat.magnitude > _velocityLimit)
+            {
+                SpeedTarget = 0.1f;
+            }
+            _speedFraction = Mathf.SmoothDamp(_speedFraction, SpeedTarget, ref _refSpeedFractionVelocity, 0.1f);
             _currentStrideRadius = Mathf.Lerp(_walkStrideRadius, _runStrideRadius, _speedFraction);
 
             _strideCircumference = 2f * Mathf.PI * _currentStrideRadius;

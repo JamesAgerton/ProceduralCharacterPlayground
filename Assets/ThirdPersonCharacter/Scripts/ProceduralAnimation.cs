@@ -47,6 +47,8 @@ namespace ProceduralCharacter.Animation
         public AnimationCurve _strideBounceCurve;
         [SerializeField]
         private float _bounceSmoothTime = 0.1f;
+        [SerializeField]
+        private float _bounceHeight = 0.1f;
 
         [Header("Crouch")]
         [SerializeField]
@@ -73,8 +75,8 @@ namespace ProceduralCharacter.Animation
         private float _crouchThreshold = 0.01f;
         private float _crouchVelocityThreshold = 0.01f;
         private Vector3 _colliderCenter = new Vector3(0f, 1f, 0f);
-        private Vector3 _XFormTiltCenter = new Vector3(0f, 1f, 0f);
         private float _colliderHeight = 2f;
+        private Vector3 _XFormTiltCenter = new Vector3(0f, 1f, 0f);
 
         float _currJumpFraction = 0.5f;
         float _jumpVelocity = 0f;
@@ -118,6 +120,7 @@ namespace ProceduralCharacter.Animation
 
             _currentCrouchFraction = 1f - _crouchOffset;
             _colliderCenter = _collider.center;
+            _colliderHeight = _collider.height;
             _XFormTiltCenter = _XFormTiltPivot.localPosition;
         }
 
@@ -195,9 +198,10 @@ namespace ProceduralCharacter.Animation
             if (_measurements.VelocityFlat.magnitude > 0.1f && _measurements.IsGrounded)
             {
                 float currentHeight = _strideBounceCurve.Evaluate(_measurements.StrideFraction * 2f % 1f) *
-                    _strideSpeedCurve.Evaluate(_measurements.SpeedFraction) / _measurements.VelocityFlat.magnitude;
+                    _strideSpeedCurve.Evaluate(_measurements.SpeedFraction);
+                Debug.Log(currentHeight);
 
-                Vector3 bounce = new Vector3(0f, currentHeight * 0.1f, 0f);
+                Vector3 bounce = new Vector3(0f, currentHeight * _bounceHeight, 0f);
                 _XFormTurnPivot.localPosition = Vector3.SmoothDamp(_XFormTurnPivot.localPosition, bounce,
                     ref _currentBounceVelocity, _bounceSmoothTime);
             }

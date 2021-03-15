@@ -1,10 +1,27 @@
 ﻿/* Movement Interpreter: James Agerton 2020
  * 
- * Must be used with ThirdPersonControls (Unity Input System (new)).
- * Takes in entered direction from the "stick" (input) and translates that to worldspace direction
- * based on a transform (presumably, the camera). The math used to make the transform requires a 
- * correction of a few degrees to avoid the value flipping into the negative. Effectively, this
- * freezes rotation between those angles, but it is preferable to the flipping behaviour.
+ * Description: 
+ *      Movement Interpreter takes in raw input values and transforms them into worldspace values for other
+ *          scripts to use.
+ * 
+ * Dependencies: 
+ *      Unity.InputSystem (a unity package for the input system)
+ *               
+ * Variables:   
+ *      _cameraTransform: Reference viewpoint, required for transform of input from screenspace to worldspace
+ *      _angleCorrection: Due to rounding error in transform from screenspace to worldspace, script locks 
+ *                          rotation for a small window. Too large a value leaves a noticeable pause when 
+ *                          rotating continuously.
+ *              
+ * Properties:  
+ *      MoveStick (Vector2):        Raw stick value from input system.
+ *      MoveDirection (Vector3):    Transformed stick value in the world space relative to the reference camera 
+ *                                      direction.
+ *      Jump (bool):                Bool indicating if the jump button is pressed or not.
+ *      Sprint (bool):              Bool indicating if the sprint button is pressed or not.
+ *      Crouch (bool):              Bool indicating if the crouch button is pressed or not.
+ *      Roll (bool):                Bool indicating if the roll button is pressed or not.
+ *      Angle (float):              Angle between the Camera direction and the MoveDirection vector.
  */
 
 using UnityEngine;
@@ -70,8 +87,6 @@ namespace ProceduralCharacter.Movement
             Vector3 stickPos = stick + transform.position;
             float stickAngle = Vector3.Angle(Vector3.forward, stick.normalized) *
                 (Vector3.Cross(stick.normalized, Vector3.forward).y >= 0f ? -1f : 1f);
-            float worldAngle = Vector3.Angle(transform.forward, _moveDirection.normalized) *
-                (Vector3.Cross(_moveDirection.normalized, transform.forward).y >= 0f ? -1f : 1f);
             Vector3 camDir = _cameraTransform.forward;
             camDir.y = 0f;
             Vector3 correctionDir = new Vector3(1 + _angleCorrection, 0f, _angleCorrection).normalized;
@@ -88,7 +103,7 @@ namespace ProceduralCharacter.Movement
 
             //Draw moveDirection
             Handles.color = Color.cyan;
-            Handles.DrawSolidArc(transform.position, transform.up, transform.forward, worldAngle, stick.magnitude / 2f);
+            Handles.DrawSolidArc(transform.position, transform.up, camDir, _angle, stick.magnitude / 2f);
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(transform.position + (_moveDirection * GizmoRadius), 0.11f);
             Gizmos.DrawLine(transform.position, transform.position + (_moveDirection * GizmoRadius));
@@ -192,8 +207,8 @@ namespace ProceduralCharacter.Movement
             _moveDirection = referentialShift * stickDirection;
 
             //find angles
-            Vector3 axisSign = Vector3.Cross(_moveDirection, transform.forward);
-            _angle = Vector3.Angle(transform.forward, _moveDirection) * (axisSign.y >= 0 ? -1f : 1f);
+            Vector3 axisSign = Vector3.Cross(_moveDirection, CameraDirection);
+            _angle = Vector3.Angle(CameraDirection, _moveDirection) * (axisSign.y >= 0 ? -1f : 1f);
         }
 
         /// <summary>
@@ -204,7 +219,7 @@ namespace ProceduralCharacter.Movement
         /// <returns></returns>
         public bool IsPivot(float max, float min)
         {
-            if (Mathf.Abs(_angle) < Mathf.Abs(max) && Mathf.Abs(Angle) > Mathf.Abs(min))
+            if (Mathf.Abs(_angle) < Mathf.Abs(max) && Mathf.Abs(_angle) > Mathf.Abs(min))
             {
                 return true;
             }
