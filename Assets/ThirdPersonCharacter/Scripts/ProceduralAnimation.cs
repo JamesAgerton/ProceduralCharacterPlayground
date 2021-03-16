@@ -182,6 +182,19 @@ namespace ProceduralCharacter.Animation
             }
         }
 
+        public void TiltCharacter(Vector3 rotateAxis, float rotateAmount)
+        {
+            _XFormTiltPivot.rotation = _XFormTurnPivot.rotation;
+            if (_XFormTiltPivot == null)
+            {
+                Debug.LogWarning("Character missing tilt pivot transform.", this);
+            }
+            else
+            {
+                _XFormTiltPivot.Rotate(rotateAxis, rotateAmount, Space.World);
+            }
+        }
+
         private void HandlePose()
         {
             float frac = _strideWeightCurve.Evaluate(_measurements.StrideFraction);
