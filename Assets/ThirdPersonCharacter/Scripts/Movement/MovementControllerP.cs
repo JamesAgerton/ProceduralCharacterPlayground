@@ -17,6 +17,11 @@
  *      _defaultSpeed:          Default movement speed goal.
  *      _crouchSpeed:           Default crouch movement speed goal.
  *      _walkSpeedSmoothTime:   SmoothDamp time for smoothing the current speed.
+ *      
+ *      _stepHeight:            (Set to negative value to disable)
+ *      _stepSmooth:            
+ *      _slopeLimit:            (Set to negative value to disable)
+ *      
  *      _jumpHeight:            Used to determine the initial velocity of the jump.
  *      _fallMultiplier:        How fast the character falls, a multiplier gives extra control to jump height.
  *      _rbDrag:                The drag value applied to the rigidbody while the character is grounded, this gives
@@ -34,19 +39,32 @@ using ProceduralCharacter.Animation;
 namespace ProceduralCharacter.Movement
 {
     [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(ProceduralMeasurements))]
+    [RequireComponent(typeof(SphereCollider))]
     public class MovementControllerP : MonoBehaviour
     {
         #region Variables(Private)
         private MovementInterpreter _input;
         private Rigidbody _body;
         private ProceduralMeasurements _measurements;
+        private SphereCollider _walkSphere;
 
+        [Header("Speed")]
         [SerializeField, Tooltip("The default movement speed.")]
         float _defaultSpeed = 5f;
         [SerializeField, Tooltip("The default movement speed while crouching.")]
         float _crouchSpeed = 2.5f;
         [SerializeField, Tooltip("The time over which a change in speed is smoothed.")]
         float _walkSpeedSmoothTime = 0.1f;
+
+        [Header("Step")]
+        [SerializeField]
+        float _stepHeight = 0.1f;
+        [SerializeField]
+        float _stepSmooth = 0.1f;
+        [SerializeField]
+        float _slopeLimit = 35f;
+
+        [Header("Jumping")]
         [SerializeField, Tooltip("The desired maximum height of a jump.")]
         float _jumpHeight = 2f;
         [SerializeField, Tooltip("A gravity multiplier applied when the jump button is not held.")]
@@ -56,9 +74,16 @@ namespace ProceduralCharacter.Movement
 
         float _walkSpeed = 0f;
         float _wSVelocity = 0f;
+        float _desiredSpeed = 0f;
+        float _currentSpeed = 0f;
+        float _deltaSpeed = 0f;
 
         bool _isJumping = false;
         float jumpVelocity = 0f;
+
+        Vector3 _forward;
+        Vector3 _fortyfiveright;
+        Vector3 _fortyfiveleft;
         #endregion
 
         #region Properties
@@ -73,10 +98,83 @@ namespace ProceduralCharacter.Movement
             _input = GetComponent<MovementInterpreter>();
             _body = GetComponent<Rigidbody>();
             _measurements = GetComponent<ProceduralMeasurements>();
+            _walkSphere = GetComponent<SphereCollider>();
         }
 
         // Update is called once per frame
         void Update()
+        {
+            _forward = _input.MoveDirection;
+            Vector3 right = Vector3.Cross(_input.MoveDirection, Vector3.up);
+            _fortyfiveright = (_input.MoveDirection.normalized + right.normalized).normalized;
+            _fortyfiveleft = (_input.MoveDirection.normalized - right.normalized).normalized;
+
+            HandleJump();
+            HandleGrounding();
+        }
+
+        private void FixedUpdate()
+        {
+            //Calculate jump
+            HandleAirtime();
+
+            HandleStep();
+
+            //Desired XZ plane speed
+            HandleMovement();
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (Application.isPlaying)
+            {
+                float lowDist = _walkSphere.radius;
+                float highDist = _walkSphere.radius;
+
+                Ray rayForwardLow = new Ray(transform.position + (Vector3.up * 0.05f), _forward);
+                Ray rayForwardHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _forward);
+                Ray rayRightLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveright);
+                Ray rayRightHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveright);
+                Ray rayLeftLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveleft);
+                Ray rayLeftHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveleft);
+
+                Gizmos.color = Color.white;
+                if((Physics.Raycast(rayForwardLow, _walkSphere.radius, _measurements.Ground) &&
+                    !Physics.Raycast(rayForwardHigh, _walkSphere.radius, _measurements.Ground)) ||
+                    (Physics.Raycast(rayRightLow, _walkSphere.radius, _measurements.Ground) &&
+                    !Physics.Raycast(rayRightHigh, _walkSphere.radius, _measurements.Ground)) ||
+                    (Physics.Raycast(rayLeftLow, _walkSphere.radius, _measurements.Ground) &&
+                    !Physics.Raycast(rayLeftHigh, _walkSphere.radius, _measurements.Ground)) )
+                {
+                    Gizmos.color = Color.green;
+                }
+
+                Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight), 
+                    transform.position + Vector3.up * _stepHeight + (_forward * lowDist));
+                Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f), 
+                    transform.position + (Vector3.up * 0.05f) + (_forward * highDist));
+                Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_forward * lowDist),
+                    transform.position + (Vector3.up * 0.05f) + (_forward * highDist));
+
+                Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight),
+                    transform.position + Vector3.up * _stepHeight + (_fortyfiveright * lowDist));
+                Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f),
+                    transform.position + (Vector3.up * 0.05f) + (_fortyfiveright * highDist));
+                Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_fortyfiveright * lowDist),
+                    transform.position + (Vector3.up * 0.05f) + (_fortyfiveright * highDist));
+
+                Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight),
+                    transform.position + Vector3.up * _stepHeight + (_fortyfiveleft * lowDist));
+                Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f),
+                    transform.position + (Vector3.up * 0.05f) + (_fortyfiveleft * highDist));
+                Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_fortyfiveleft * lowDist),
+                    transform.position + (Vector3.up * 0.05f) + (_fortyfiveleft * highDist));
+            }
+        }
+        #endregion
+
+        #region Methods
+        private void HandleJump()
         {
             jumpVelocity = Mathf.Sqrt(_jumpHeight * -2f * Physics.gravity.y);
 
@@ -90,7 +188,10 @@ namespace ProceduralCharacter.Movement
             {
                 _isJumping = false;
             }
+        }
 
+        private void HandleGrounding()
+        {
             if (!_measurements.IsGrounded)
             {
                 _walkSpeed *= 0.5f;
@@ -108,39 +209,106 @@ namespace ProceduralCharacter.Movement
             }
         }
 
-        private void FixedUpdate()
+        private void HandleAirtime()
         {
-            //Calculate jump
-            if(_body.velocity.y < 0)
+            if (_body.velocity.y < 0)
             {
                 //Character is falling
                 _body.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.deltaTime;
             }
-            else if(_body.velocity.y > 0 && !_input.Jump)
+            else if (_body.velocity.y > 0 && !_input.Jump)
             {
                 //use higher multiplier to halt upward momentum
                 _body.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.deltaTime;
             }
+        }
 
-            //Desired XZ plane speed
-            float desiredSpeed = _input.MoveDirection.magnitude * _walkSpeed;
-            float currentSpeed = new Vector3(_body.velocity.x, 0f, _body.velocity.z).magnitude;
-            float deltaSpeed = desiredSpeed - currentSpeed;
-            deltaSpeed = Mathf.Clamp(deltaSpeed, 0f, 1000f);
-            if (Mathf.Abs(deltaSpeed) > 0.5f)
+        private void HandleMovement()
+        {
+            _desiredSpeed = _input.MoveDirection.magnitude * _walkSpeed;
+            _currentSpeed = _measurements.VelocityFlat.magnitude;
+            _deltaSpeed = _desiredSpeed - _currentSpeed;
+            _deltaSpeed = Mathf.Clamp(_deltaSpeed, 0f, 1000f);
+
+            Vector3 desiredDirection = _input.MoveDirection;
+            desiredDirection = HandleSlope(desiredDirection);
+            if (Mathf.Abs(_deltaSpeed) > 0.5f)
             {
-                _body.AddForce(_input.MoveDirection * deltaSpeed, ForceMode.VelocityChange);
+                _body.AddForce(desiredDirection * _deltaSpeed, ForceMode.VelocityChange);
+                //_body.velocity += desiredDirection * _deltaSpeed;
             }
         }
 
-        private void OnDrawGizmos()
+        private void HandleStep()
         {
+            if(_stepHeight > 0f)
+            {
+                Ray rayForwardLow = new Ray(transform.position + (Vector3.up * 0.05f), _forward);
+                Ray rayForwardHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _forward);
+                Ray rayRightLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveright);
+                Ray rayRightHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveright);
+                Ray rayLeftLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveleft);
+                Ray rayLeftHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveleft);
 
+                RaycastHit hitLower;
+                if (Physics.Raycast(rayForwardLow, out hitLower, _walkSphere.radius, _measurements.Ground))
+                {
+                    RaycastHit hitUpper;
+                    if (!Physics.Raycast(rayForwardHigh, out hitUpper, _walkSphere.radius, _measurements.Ground))
+                    {
+                        if (Vector3.Angle(hitLower.normal, Vector3.up) > _slopeLimit && _input.MoveDirection.magnitude > 0f)
+                        {
+                            _body.position += new Vector3(0f, _stepSmooth, 0f);
+                            return;
+                        }
+                    }
+                }
+
+                if (Physics.Raycast(rayRightLow, out hitLower, _walkSphere.radius, _measurements.Ground))
+                {
+                    RaycastHit hitUpper;
+                    if (!Physics.Raycast(rayRightHigh, out hitUpper, _walkSphere.radius, _measurements.Ground))
+                    {
+                        if (Vector3.Angle(hitLower.normal, Vector3.up) > _slopeLimit && _input.MoveDirection.magnitude > 0f)
+                        {
+                            _body.position += new Vector3(0f, _stepSmooth, 0f);
+                            return;
+                        }
+                    }
+                }
+
+                if (Physics.Raycast(rayLeftLow, out hitLower, _walkSphere.radius, _measurements.Ground))
+                {
+                    RaycastHit hitUpper;
+                    if (!Physics.Raycast(rayLeftHigh, out hitUpper, _walkSphere.radius, _measurements.Ground))
+                    {
+                        if (Vector3.Angle(hitLower.normal, Vector3.up) > _slopeLimit && _input.MoveDirection.magnitude > 0f)
+                        {
+                            _body.position += new Vector3(0f, _stepSmooth, 0f);
+                            return;
+                        }
+                    }
+                }
+            }
         }
-        #endregion
 
-        #region Methods
-
+        private Vector3 HandleSlope(Vector3 input)
+        {
+            Vector3 output = input;
+            if (_measurements.IsGrounded && _slopeLimit > 0f)
+            {
+                RaycastHit groundHit;
+                if(Physics.SphereCast(transform.position + Vector3.up * 0.1f, _walkSphere.radius, Vector3.down, 
+                    out groundHit, 0.2f, _measurements.Ground))
+                {
+                    if (Vector3.Angle(groundHit.normal, Vector3.up) < _slopeLimit)
+                    {
+                        output = Vector3.ProjectOnPlane(input, groundHit.normal).normalized;
+                    }
+                }
+            }
+            return output;
+        }
         #endregion
     }
 }

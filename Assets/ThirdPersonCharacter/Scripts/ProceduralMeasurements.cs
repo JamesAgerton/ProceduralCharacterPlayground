@@ -2,6 +2,14 @@
  * 
  * Description: 
  *      This script makes a large number of measurements intended to be used by other scripts.
+ *      
+ *      IsGrounded:     Checks if the character is grounded using a checksphere with radius = _groundDistance and the _ground
+ *                          layermask.
+ *      Velocity:       Harvested and adjusted from rigidbody.
+ *      Acceleration:   Using velocity and fixedDeltaTime, calculates the acceleration vector. The value is smoothDamped using
+ *                          _accelerationFilter, 49 works well.
+ *      Stride Wheel:   The stridewheel is a measurement of distance travelled but in rotations instead of meters. A full rotation
+ *                          should be equal to a full walk cycle.
  * 
  * Dependencies: 
  *      Rigidbody: The physics component of the gameobject.
@@ -47,12 +55,15 @@ namespace ProceduralCharacter.Animation
         #region Variables(Private)
         private Rigidbody _body;
 
+        [Header("Velocity & Acceleration")]
         [SerializeField, Tooltip("Minimum velocity to use in calculations.")]
         private float _velocityLimit = 0.1f;
         [SerializeField, Tooltip("Filter value for smoothing Acceleration measurement.")]
         private float _accelerationFilter = 5f;
         [SerializeField, Tooltip("Used for clamping acceleration measurement to a max scale.")]
         private float _maxAccelerationScale = 5f;
+
+        [Header("Stride Wheel")]
         [SerializeField, Tooltip("The size of the stride wheel used to determine the stride length during max speeds.")]
         private float _runStrideRadius = 1.25f;
         [SerializeField, Tooltip("The size of the stride wheel used to determine the stride length during minimum speeds.")]
@@ -67,7 +78,6 @@ namespace ProceduralCharacter.Animation
         public LayerMask _ground;
 
         private bool _isGrounded = false;
-        private bool _relativelyStill = false;
 
         private Vector3 _velocity = Vector3.forward;
         private Vector3 _velocityFlat = Vector3.forward;
@@ -81,6 +91,8 @@ namespace ProceduralCharacter.Animation
         private Vector3 _accelerationFlatDirection = Vector3.zero;
         private float _accelerationMagnitude = 0f;
         private float _accelerationFlatMagnitude = 0f;
+        private Vector3 _accDirVel = Vector3.zero;
+        private Vector3 _accFlatDirVel = Vector3.zero;
 
         private float _strideAngle = 0f;
         private float _strideFraction = 0f;
@@ -92,7 +104,7 @@ namespace ProceduralCharacter.Animation
 
         #region Properties
         public bool IsGrounded => _isGrounded;
-        public bool RelativelyStill => _relativelyStill;
+        public LayerMask Ground => _ground;
         public Vector3 Velocity => _velocity;
         public Vector3 VelocityFlat => _velocityFlat;
         public Vector3 VelocityDirection => _velocityDirection;
@@ -120,16 +132,20 @@ namespace ProceduralCharacter.Animation
         {
             _isGrounded = Physics.CheckSphere(transform.position,
                 _groundDistance, _ground, QueryTriggerInteraction.Ignore);
-            CheckRelativeFootingVelocity(_velocityLimit);
 
             //Find velocity direction and flatten vector
             CalculateVelocity();
 
-            //Find average acceleration over deltatime
-            CalculateAcceleration();
-
             //Calculate Stride wheel?
             CalculateStrideWheel();
+
+            //Find average acceleration over deltatime
+            CalculateAcceleration();
+        }
+
+        private void FixedUpdate()
+        {
+
         }
 
         private void OnDrawGizmos()
@@ -150,6 +166,9 @@ namespace ProceduralCharacter.Animation
             Gizmos.DrawLine(transform.position + Vector3.up, transform.position +
                 _velocityDirection + Vector3.up);
             Gizmos.DrawWireSphere(transform.position + _velocityDirection + Vector3.up, 0.2f);
+            Gizmos.color = Color.gray;
+            Gizmos.DrawLine(transform.position + Vector3.up, transform.position + (_velocity/5f) + Vector3.up);
+            Gizmos.DrawWireSphere(transform.position + (_velocity/5f) + Vector3.up, 0.15f);
 
             //Draw Acceleration Direction
             Gizmos.color = Color.red;
@@ -200,15 +219,18 @@ namespace ProceduralCharacter.Animation
 
         private void CalculateAcceleration()
         {
-            _acceleration = (_velocity - _lastVelocity) / Time.fixedDeltaTime;
+            _acceleration = ((_velocity - _lastVelocity) / Time.fixedDeltaTime);
             _lastVelocity = _velocity;
-            _accelerationFlat = (_velocityFlat - _lastVelocityFlat) / Time.fixedDeltaTime;
+            _accelerationFlat = ((_velocityFlat - _lastVelocityFlat) / Time.fixedDeltaTime);
             _lastVelocityFlat = _velocityFlat;
             //Smooth that shaky shit
-            _accelerationDirection = Vector3.Lerp(_acceleration, _accelerationDirection, _accelerationFilter * Time.fixedDeltaTime);
-            _accelerationFlatDirection = Vector3.Lerp(_accelerationFlat, _accelerationFlatDirection, _accelerationFilter * Time.fixedDeltaTime);
+            //_accelerationDirection = Vector3.Lerp(_accelerationDirection, _acceleration, _accelerationFilter * Time.deltaTime);
+            //_accelerationFlatDirection = Vector3.Lerp(_accelerationFlatDirection, _accelerationFlat, _accelerationFilter * Time.deltaTime);
+            _accelerationDirection = Vector3.SmoothDamp(_accelerationDirection, _acceleration, ref _accDirVel, _accelerationFilter);
+            _accelerationFlatDirection = Vector3.SmoothDamp(_accelerationFlatDirection, _accelerationFlat, ref _accFlatDirVel, _accelerationFilter);
+            
             //rescale?
-            _accelerationMagnitude = Mathf.Clamp(_accelerationDirection.magnitude, 0, _maxAccelerationScale) / _maxAccelerationScale;
+            _accelerationMagnitude =Mathf.Clamp(_accelerationDirection.magnitude, 0, _maxAccelerationScale) / _maxAccelerationScale;
             _accelerationFlatMagnitude = Mathf.Clamp(_accelerationFlatDirection.magnitude, 0, _maxAccelerationScale) / _maxAccelerationScale;
         }
 
@@ -221,67 +243,22 @@ namespace ProceduralCharacter.Animation
 
             //calculate which radius to use based on current velocity
             float SpeedTarget = 0f;
-            if (!_relativelyStill)
+            if (_velocityFlat.magnitude > _minSpeed)
             {
-                if (_velocityFlat.magnitude > _minSpeed)
-                {
-                    SpeedTarget = Mathf.Clamp(_velocityFlat.magnitude / _maxSpeed, 0f, 1f);
-                }
-                else if (_velocityFlat.magnitude > _velocityLimit)
-                {
-                    SpeedTarget = 0.1f;
-                }
-                _speedFraction = Mathf.SmoothDamp(_speedFraction, SpeedTarget, ref _refSpeedFractionVelocity, 0.1f);
-                _currentStrideRadius = Mathf.Lerp(_walkStrideRadius, _runStrideRadius, _speedFraction);
+                SpeedTarget = Mathf.Clamp(_velocityFlat.magnitude / _maxSpeed, 0f, 1f);
+            }
+            else if (_velocityFlat.magnitude > _velocityLimit)
+            {
+                SpeedTarget = 0.1f;
+            }
+            _speedFraction = Mathf.SmoothDamp(_speedFraction, SpeedTarget, ref _refSpeedFractionVelocity, 0.1f);
+            _currentStrideRadius = Mathf.Lerp(_walkStrideRadius, _runStrideRadius, _speedFraction);
 
-                _strideCircumference = 2f * Mathf.PI * _currentStrideRadius;
-                float _frameDistance = _velocityFlat.magnitude * (Time.deltaTime * Time.timeScale);
-                float Angle = (_frameDistance / _strideCircumference) * 360f;
-                _strideAngle = (_strideAngle + Angle) % 360f;
-                _strideFraction = _strideAngle / 360f;
-            }
-            else
-            {
-                _speedFraction = Mathf.SmoothDamp(_speedFraction, SpeedTarget, ref _refSpeedFractionVelocity, 0.1f);
-                _currentStrideRadius = Mathf.Lerp(_walkStrideRadius, _runStrideRadius, _speedFraction);
-            }
-        }
-
-        /// <summary>
-        /// Return true if the relative velocity of a rigidbody the character is standing on is near zero. Returns false if the relative velocity is greater than zero.
-        /// </summary>
-        /// <param name="VelocityThreshold"></param>
-        /// <returns></returns>
-        public Vector3 CheckRelativeFootingVelocity(float VelocityThreshold)
-        {
-            Vector3 velocity = Vector3.zero;
-            if (_isGrounded)
-            {
-                RaycastHit hitinfo;
-                Ray ray = new Ray(transform.position + Vector3.up * 0.5f, Vector3.down);
-                if(Physics.SphereCast(ray, _groundDistance, out hitinfo, _groundDistance, _ground))
-                {
-                    if(hitinfo.rigidbody != null)
-                    {
-                        velocity = hitinfo.rigidbody.GetPointVelocity(hitinfo.point);
-                        if (( _velocityFlat - new Vector3(velocity.x, 0f, velocity.z) ).magnitude < VelocityThreshold)
-                        {
-                            Debug.Log(hitinfo.transform.name + " True: " + _body.velocity + " - " + velocity + " = " + (_body.velocity - velocity).magnitude);
-                            _relativelyStill = true;
-                            return velocity;
-                        }
-                        else
-                        {
-                            _relativelyStill = false;
-                            Debug.Log(hitinfo.transform.name + " False: " + _body.velocity + " - " + velocity + " = " + (_body.velocity - velocity).magnitude);
-                            return velocity;
-                        }
-                    }
-                }
-            }
-            //default return is true when no rigidbody exists.
-            //_relativelyStill = false;
-            return velocity;
+            _strideCircumference = 2f * Mathf.PI * _currentStrideRadius;
+            float _frameDistance = _velocityFlat.magnitude * (Time.deltaTime * Time.timeScale);
+            float Angle = (_frameDistance / _strideCircumference) * 360f;
+            _strideAngle = (_strideAngle + Angle) % 360f;
+            _strideFraction = _strideAngle / 360f;
         }
         #endregion
     }
