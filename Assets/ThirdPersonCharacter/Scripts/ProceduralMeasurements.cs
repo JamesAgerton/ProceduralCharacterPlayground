@@ -72,12 +72,13 @@ namespace ProceduralCharacter.Animation
         private float _minSpeed = 2.5f;
         [SerializeField, Tooltip("The maximum speed the character runs, should match a speed set by the MovementController.")]
         private float _maxSpeed = 8f;   //Velocity magnitude when wheel should be at its largest
-        [SerializeField, Tooltip("Radius of the sphere used to check if the character is grounded.")]
-        private float _groundDistance = 0.5f;
+        [SerializeField, Tooltip("Length of the raycast used to check if the character is grounded.")]
+        private float _groundDistance = 1f;
         [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
         public LayerMask _ground;
 
         private bool _isGrounded = false;
+        private RaycastHit _groundHit;
 
         private Vector3 _velocity = Vector3.forward;
         private Vector3 _velocityFlat = Vector3.forward;
@@ -104,6 +105,7 @@ namespace ProceduralCharacter.Animation
 
         #region Properties
         public bool IsGrounded => _isGrounded;
+        public RaycastHit GroundHit => _groundHit;
         public LayerMask Ground => _ground;
         public Vector3 Velocity => _velocity;
         public Vector3 VelocityFlat => _velocityFlat;
@@ -130,8 +132,15 @@ namespace ProceduralCharacter.Animation
         // Update is called once per frame
         void Update()
         {
-            _isGrounded = Physics.CheckSphere(transform.position,
-                _groundDistance, _ground, QueryTriggerInteraction.Ignore);
+            Ray ray = new Ray(_body.position + Vector3.up * _groundDistance, Vector3.down);
+            if (Physics.Raycast(ray, out _groundHit, _groundDistance + 0.5f, _ground))
+            {
+                _isGrounded = true;
+            }
+            else
+            {
+                _isGrounded = false;
+            }
 
             //Find velocity direction and flatten vector
             CalculateVelocity();
@@ -154,18 +163,20 @@ namespace ProceduralCharacter.Animation
             if (_isGrounded)
             {
                 Gizmos.color = Color.green;
+                Gizmos.DrawWireSphere(_groundHit.point, 0.3f);
             }
             else
             {
                 Gizmos.color = Color.magenta;
+                Gizmos.DrawWireSphere(transform.position - Vector3.up * 0.5f, 0.3f);
             }
-            Gizmos.DrawWireSphere(transform.position, _groundDistance);
 
             //Draw Velocity Direction
             Gizmos.color = Color.green;
             Gizmos.DrawLine(transform.position + Vector3.up, transform.position +
                 _velocityDirection + Vector3.up);
             Gizmos.DrawWireSphere(transform.position + _velocityDirection + Vector3.up, 0.2f);
+            //raw Velocity vector
             Gizmos.color = Color.gray;
             Gizmos.DrawLine(transform.position + Vector3.up, transform.position + (_velocity/5f) + Vector3.up);
             Gizmos.DrawWireSphere(transform.position + (_velocity/5f) + Vector3.up, 0.15f);

@@ -39,14 +39,14 @@ using ProceduralCharacter.Animation;
 namespace ProceduralCharacter.Movement
 {
     [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(ProceduralMeasurements))]
-    [RequireComponent(typeof(SphereCollider))]
+    //[RequireComponent(typeof(SphereCollider))]
     public class MovementControllerP : MonoBehaviour
     {
         #region Variables(Private)
         private MovementInterpreter _input;
         private Rigidbody _body;
         private ProceduralMeasurements _measurements;
-        private SphereCollider _walkSphere;
+        //private SphereCollider _walkSphere;
 
         [Header("Speed")]
         [SerializeField, Tooltip("The default movement speed.")]
@@ -61,6 +61,9 @@ namespace ProceduralCharacter.Movement
         float _stepHeight = 0.1f;
         [SerializeField]
         float _stepSmooth = 0.1f;
+        Vector3 _stepRef = Vector3.zero;
+        //[SerializeField]
+        //PIDController _stepPID;
         [SerializeField]
         float _slopeLimit = 35f;
 
@@ -98,7 +101,7 @@ namespace ProceduralCharacter.Movement
             _input = GetComponent<MovementInterpreter>();
             _body = GetComponent<Rigidbody>();
             _measurements = GetComponent<ProceduralMeasurements>();
-            _walkSphere = GetComponent<SphereCollider>();
+            //_walkSphere = GetComponent<SphereCollider>();
         }
 
         // Update is called once per frame
@@ -109,66 +112,66 @@ namespace ProceduralCharacter.Movement
             _fortyfiveright = (_input.MoveDirection.normalized + right.normalized).normalized;
             _fortyfiveleft = (_input.MoveDirection.normalized - right.normalized).normalized;
 
-            HandleJump();
             HandleGrounding();
-        }
+            HandleJump();
 
-        private void FixedUpdate()
-        {
             //Calculate jump
             HandleAirtime();
 
-            HandleStep();
-
             //Desired XZ plane speed
             HandleMovement();
+        }
+
+        private void LateUpdate()
+        {
+            //HandleStep();
         }
 
         private void OnDrawGizmos()
         {
             if (Application.isPlaying)
             {
-                float lowDist = _walkSphere.radius;
-                float highDist = _walkSphere.radius;
+                //float lowDist = _walkSphere.radius;
+                //float highDist = _walkSphere.radius;
 
-                Ray rayForwardLow = new Ray(transform.position + (Vector3.up * 0.05f), _forward);
-                Ray rayForwardHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _forward);
-                Ray rayRightLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveright);
-                Ray rayRightHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveright);
-                Ray rayLeftLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveleft);
-                Ray rayLeftHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveleft);
+                //Ray rayForwardLow = new Ray(transform.position + (Vector3.up * 0.05f), _forward);
+                //Ray rayForwardHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _forward);
+                //Ray rayRightLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveright);
+                //Ray rayRightHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveright);
+                //Ray rayLeftLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveleft);
+                //Ray rayLeftHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveleft);
 
-                Gizmos.color = Color.white;
-                if((Physics.Raycast(rayForwardLow, _walkSphere.radius, _measurements.Ground) &&
-                    !Physics.Raycast(rayForwardHigh, _walkSphere.radius, _measurements.Ground)) ||
-                    (Physics.Raycast(rayRightLow, _walkSphere.radius, _measurements.Ground) &&
-                    !Physics.Raycast(rayRightHigh, _walkSphere.radius, _measurements.Ground)) ||
-                    (Physics.Raycast(rayLeftLow, _walkSphere.radius, _measurements.Ground) &&
-                    !Physics.Raycast(rayLeftHigh, _walkSphere.radius, _measurements.Ground)) )
-                {
-                    Gizmos.color = Color.green;
-                }
+                //Gizmos.color = Color.white;
+                //if((Physics.Raycast(rayForwardLow, _walkSphere.radius, _measurements.Ground) &&
+                //    !Physics.Raycast(rayForwardHigh, _walkSphere.radius, _measurements.Ground)) ||
+                //    (Physics.Raycast(rayRightLow, _walkSphere.radius, _measurements.Ground) &&
+                //    !Physics.Raycast(rayRightHigh, _walkSphere.radius, _measurements.Ground)) ||
+                //    (Physics.Raycast(rayLeftLow, _walkSphere.radius, _measurements.Ground) &&
+                //    !Physics.Raycast(rayLeftHigh, _walkSphere.radius, _measurements.Ground)) )
+                //{
+                //    Gizmos.color = Color.green;
+                //}
 
-                Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight), 
-                    transform.position + Vector3.up * _stepHeight + (_forward * lowDist));
-                Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f), 
-                    transform.position + (Vector3.up * 0.05f) + (_forward * highDist));
-                Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_forward * lowDist),
-                    transform.position + (Vector3.up * 0.05f) + (_forward * highDist));
+                //Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight), 
+                //    transform.position + Vector3.up * _stepHeight + (_forward * lowDist));
+                //Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f), 
+                //    transform.position + (Vector3.up * 0.05f) + (_forward * highDist));
+                //Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_forward * lowDist),
+                //    transform.position + (Vector3.up * 0.05f) + (_forward * highDist));
 
-                Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight),
-                    transform.position + Vector3.up * _stepHeight + (_fortyfiveright * lowDist));
-                Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f),
-                    transform.position + (Vector3.up * 0.05f) + (_fortyfiveright * highDist));
-                Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_fortyfiveright * lowDist),
-                    transform.position + (Vector3.up * 0.05f) + (_fortyfiveright * highDist));
+                //Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight),
+                //    transform.position + Vector3.up * _stepHeight + (_fortyfiveright * lowDist));
+                //Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f),
+                //    transform.position + (Vector3.up * 0.05f) + (_fortyfiveright * highDist));
+                //Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_fortyfiveright * lowDist),
+                //    transform.position + (Vector3.up * 0.05f) + (_fortyfiveright * highDist));
 
-                Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight),
-                    transform.position + Vector3.up * _stepHeight + (_fortyfiveleft * lowDist));
-                Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f),
-                    transform.position + (Vector3.up * 0.05f) + (_fortyfiveleft * highDist));
-                Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_fortyfiveleft * lowDist),
-                    transform.position + (Vector3.up * 0.05f) + (_fortyfiveleft * highDist));
+                //Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight),
+                //    transform.position + Vector3.up * _stepHeight + (_fortyfiveleft * lowDist));
+                //Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f),
+                //    transform.position + (Vector3.up * 0.05f) + (_fortyfiveleft * highDist));
+                //Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_fortyfiveleft * lowDist),
+                //    transform.position + (Vector3.up * 0.05f) + (_fortyfiveleft * highDist));
             }
         }
         #endregion
@@ -181,12 +184,14 @@ namespace ProceduralCharacter.Movement
             if (_input.Jump && _measurements.IsGrounded && !_isJumping)
             {
                 _body.velocity += new Vector3(0f, jumpVelocity, 0f);
+                _body.drag = 0f;
                 _isJumping = true;
             }
 
             if (_isJumping && _measurements.IsGrounded && _body.velocity.y <= 0 && !_input.Jump)
             {
                 _isJumping = false;
+                _body.drag = _rbDrag;
             }
         }
 
@@ -197,12 +202,12 @@ namespace ProceduralCharacter.Movement
                 _walkSpeed *= 0.5f;
                 _body.drag = 0f;
             }
-            else if (_measurements.IsGrounded && _input.Crouch)
+            else if (_measurements.IsGrounded && _input.Crouch && !_isJumping)
             {
                 _body.drag = _rbDrag;
                 _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _crouchSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
             }
-            else
+            else 
             {
                 _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _defaultSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
                 _body.drag = _rbDrag;
@@ -241,54 +246,15 @@ namespace ProceduralCharacter.Movement
 
         private void HandleStep()
         {
-            if(_stepHeight > 0f)
+            //TODO: Implement force vector to maintain consistent height instead of using collidersphere
+            if(_measurements.IsGrounded && _measurements.GroundHit.distance <= _stepHeight)
             {
-                Ray rayForwardLow = new Ray(transform.position + (Vector3.up * 0.05f), _forward);
-                Ray rayForwardHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _forward);
-                Ray rayRightLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveright);
-                Ray rayRightHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveright);
-                Ray rayLeftLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveleft);
-                Ray rayLeftHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveleft);
-
-                RaycastHit hitLower;
-                if (Physics.Raycast(rayForwardLow, out hitLower, _walkSphere.radius, _measurements.Ground))
-                {
-                    RaycastHit hitUpper;
-                    if (!Physics.Raycast(rayForwardHigh, out hitUpper, _walkSphere.radius, _measurements.Ground))
-                    {
-                        if (Vector3.Angle(hitLower.normal, Vector3.up) > _slopeLimit && _input.MoveDirection.magnitude > 0f)
-                        {
-                            _body.position += new Vector3(0f, _stepSmooth, 0f);
-                            return;
-                        }
-                    }
-                }
-
-                if (Physics.Raycast(rayRightLow, out hitLower, _walkSphere.radius, _measurements.Ground))
-                {
-                    RaycastHit hitUpper;
-                    if (!Physics.Raycast(rayRightHigh, out hitUpper, _walkSphere.radius, _measurements.Ground))
-                    {
-                        if (Vector3.Angle(hitLower.normal, Vector3.up) > _slopeLimit && _input.MoveDirection.magnitude > 0f)
-                        {
-                            _body.position += new Vector3(0f, _stepSmooth, 0f);
-                            return;
-                        }
-                    }
-                }
-
-                if (Physics.Raycast(rayLeftLow, out hitLower, _walkSphere.radius, _measurements.Ground))
-                {
-                    RaycastHit hitUpper;
-                    if (!Physics.Raycast(rayLeftHigh, out hitUpper, _walkSphere.radius, _measurements.Ground))
-                    {
-                        if (Vector3.Angle(hitLower.normal, Vector3.up) > _slopeLimit && _input.MoveDirection.magnitude > 0f)
-                        {
-                            _body.position += new Vector3(0f, _stepSmooth, 0f);
-                            return;
-                        }
-                    }
-                }
+                //float current = _measurements.GroundHit.distance;
+                //float err = _stepHeight - current;
+                //Vector3 force = Vector3.up * _stepPID.Update(err) * _body.mass;
+                //_body.AddForce(force, ForceMode.Acceleration);
+                Vector3 pos = Vector3.SmoothDamp(_body.position, _measurements.GroundHit.point, ref _stepRef, _stepSmooth);
+                _body.MovePosition(pos);
             }
         }
 
@@ -297,14 +263,13 @@ namespace ProceduralCharacter.Movement
             Vector3 output = input;
             if (_measurements.IsGrounded && _slopeLimit > 0f)
             {
-                RaycastHit groundHit;
-                if(Physics.SphereCast(transform.position + Vector3.up * 0.1f, _walkSphere.radius, Vector3.down, 
-                    out groundHit, 0.2f, _measurements.Ground))
+                float mult = Mathf.Clamp01((_slopeLimit - Vector3.Angle(_measurements.GroundHit.normal, Vector3.up)) / _slopeLimit);
+                Debug.Log(mult);
+                output = Vector3.ProjectOnPlane(input, _measurements.GroundHit.normal).normalized;
+                if(output.y > 0)
                 {
-                    if (Vector3.Angle(groundHit.normal, Vector3.up) < _slopeLimit)
-                    {
-                        output = Vector3.ProjectOnPlane(input, groundHit.normal).normalized;
-                    }
+                    //output = new Vector3(output.x, output.y * mult, output.z);
+                    output *= mult;
                 }
             }
             return output;
