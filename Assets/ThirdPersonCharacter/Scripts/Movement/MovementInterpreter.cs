@@ -93,17 +93,17 @@ namespace ProceduralCharacter.Movement
             Vector3 antiCorrectionDir = new Vector3((1 + _angleCorrection) * -1f, 0f, _angleCorrection).normalized;
 
             //Draw moveStick
-            Handles.color = Color.grey;
-            Handles.DrawWireDisc(transform.position, transform.up, GizmoRadius);
-            Handles.DrawWireArc(transform.position, transform.up, Vector3.forward, stickAngle, stick.magnitude);
+            //Handles.color = Color.grey;
+            //Handles.DrawWireDisc(transform.position, transform.up, GizmoRadius);
+            //Handles.DrawWireArc(transform.position, transform.up, Vector3.forward, stickAngle, stick.magnitude);
             Gizmos.color = Color.grey;
             Gizmos.DrawSphere(stickPos, 0.1f);
             Gizmos.DrawLine(transform.position, stickPos);
             Gizmos.DrawLine(transform.position, Vector3.forward + transform.position);
 
             //Draw moveDirection
-            Handles.color = Color.cyan;
-            Handles.DrawSolidArc(transform.position, transform.up, camDir, _angle, stick.magnitude / 2f);
+            //Handles.color = Color.cyan;
+            //Handles.DrawSolidArc(transform.position, transform.up, camDir, _angle, stick.magnitude / 2f);
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(transform.position + (_moveDirection * GizmoRadius), 0.11f);
             Gizmos.DrawLine(transform.position, transform.position + (_moveDirection * GizmoRadius));
@@ -112,9 +112,9 @@ namespace ProceduralCharacter.Movement
             Gizmos.DrawLine(transform.position, transform.position + transform.forward * stick.magnitude / 2f);
 
             //Draw CameraDirection
-            Handles.color = Color.red;
-            Handles.DrawWireArc(transform.position, transform.up, camDir, -7f, GizmoRadius);
-            Handles.DrawWireArc(transform.position, transform.up, camDir, 7f, GizmoRadius);
+            //Handles.color = Color.red;
+            //Handles.DrawWireArc(transform.position, transform.up, camDir, -7f, GizmoRadius);
+            //Handles.DrawWireArc(transform.position, transform.up, camDir, 7f, GizmoRadius);
             Gizmos.color = Color.red;
             Gizmos.DrawLine(transform.position + camDir * (GizmoRadius - 0.2f), transform.position + camDir * (GizmoRadius + 0.2f));
 

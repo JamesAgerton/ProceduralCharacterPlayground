@@ -39,14 +39,12 @@ using ProceduralCharacter.Animation;
 namespace ProceduralCharacter.Movement
 {
     [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(ProceduralMeasurements))]
-    //[RequireComponent(typeof(SphereCollider))]
     public class MovementControllerP : MonoBehaviour
     {
         #region Variables(Private)
         private MovementInterpreter _input;
         private Rigidbody _body;
         private ProceduralMeasurements _measurements;
-        //private SphereCollider _walkSphere;
 
         [Header("Speed")]
         [SerializeField, Tooltip("The default movement speed.")]
@@ -56,14 +54,9 @@ namespace ProceduralCharacter.Movement
         [SerializeField, Tooltip("The time over which a change in speed is smoothed.")]
         float _walkSpeedSmoothTime = 0.1f;
 
-        [Header("Step")]
+        [Header("Step Up")]
         [SerializeField]
-        float _stepHeight = 0.1f;
-        [SerializeField]
-        float _stepSmooth = 0.1f;
-        Vector3 _stepRef = Vector3.zero;
-        //[SerializeField]
-        //PIDController _stepPID;
+        float _stepUpHeight = 0.7f;
         [SerializeField]
         float _slopeLimit = 35f;
 
@@ -83,10 +76,6 @@ namespace ProceduralCharacter.Movement
 
         bool _isJumping = false;
         float jumpVelocity = 0f;
-
-        Vector3 _forward;
-        Vector3 _fortyfiveright;
-        Vector3 _fortyfiveleft;
         #endregion
 
         #region Properties
@@ -101,30 +90,23 @@ namespace ProceduralCharacter.Movement
             _input = GetComponent<MovementInterpreter>();
             _body = GetComponent<Rigidbody>();
             _measurements = GetComponent<ProceduralMeasurements>();
-            //_walkSphere = GetComponent<SphereCollider>();
         }
 
         // Update is called once per frame
         void Update()
         {
-            _forward = _input.MoveDirection;
-            Vector3 right = Vector3.Cross(_input.MoveDirection, Vector3.up);
-            _fortyfiveright = (_input.MoveDirection.normalized + right.normalized).normalized;
-            _fortyfiveleft = (_input.MoveDirection.normalized - right.normalized).normalized;
-
             HandleGrounding();
+
             HandleJump();
+        }
+
+        private void FixedUpdate()
+        {
+            //Desired XZ plane speed
+            HandleMovement();
 
             //Calculate jump
             HandleAirtime();
-
-            //Desired XZ plane speed
-            HandleMovement();
-        }
-
-        private void LateUpdate()
-        {
-            //HandleStep();
         }
 
         private void OnDrawGizmos()
@@ -244,27 +226,13 @@ namespace ProceduralCharacter.Movement
             }
         }
 
-        private void HandleStep()
-        {
-            //TODO: Implement force vector to maintain consistent height instead of using collidersphere
-            if(_measurements.IsGrounded && _measurements.GroundHit.distance <= _stepHeight)
-            {
-                //float current = _measurements.GroundHit.distance;
-                //float err = _stepHeight - current;
-                //Vector3 force = Vector3.up * _stepPID.Update(err) * _body.mass;
-                //_body.AddForce(force, ForceMode.Acceleration);
-                Vector3 pos = Vector3.SmoothDamp(_body.position, _measurements.GroundHit.point, ref _stepRef, _stepSmooth);
-                _body.MovePosition(pos);
-            }
-        }
-
         private Vector3 HandleSlope(Vector3 input)
         {
             Vector3 output = input;
             if (_measurements.IsGrounded && _slopeLimit > 0f)
             {
                 float mult = Mathf.Clamp01((_slopeLimit - Vector3.Angle(_measurements.GroundHit.normal, Vector3.up)) / _slopeLimit);
-                Debug.Log(mult);
+                //Debug.Log(mult);
                 output = Vector3.ProjectOnPlane(input, _measurements.GroundHit.normal).normalized;
                 if(output.y > 0)
                 {
@@ -273,6 +241,13 @@ namespace ProceduralCharacter.Movement
                 }
             }
             return output;
+        }
+
+        private void HandleStep()
+        {
+            //Try two rays, one shooting out from the feet, one from the _stepUpHeight
+            //If the bottom ray hits but the top doesn't, then the character should move up 
+            //Otherwise it's a wall or flat ground and it should do nothing.
         }
         #endregion
     }

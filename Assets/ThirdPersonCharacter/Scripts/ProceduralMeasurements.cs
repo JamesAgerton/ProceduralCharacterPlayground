@@ -193,9 +193,9 @@ namespace ProceduralCharacter.Animation
 
             //Draw Stride Wheel
             Gizmos.color = Color.white;
-            Handles.color = Color.white;
-            Handles.DrawWireDisc(transform.position + Vector3.up * _currentStrideRadius,
-                transform.GetChild(0).right, _currentStrideRadius);
+            //Handles.color = Color.white;
+            //Handles.DrawWireDisc(transform.position + Vector3.up * _currentStrideRadius,
+            //    transform.GetChild(0).right, _currentStrideRadius);
             for (int i = 0; i < 4; i++)
             {
                 float div = 0.75f;
