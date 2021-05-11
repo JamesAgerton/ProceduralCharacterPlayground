@@ -198,7 +198,7 @@ namespace ProceduralCharacter.Movement
             Quaternion referentialShift = Quaternion.FromToRotation(Vector3.forward, CameraDirection);
             if (CameraDirection.z <= _angleCorrection)
             {
-                Debug.Log("Correction");
+                //Debug.Log("Correction");
                 float mult = stick.x > 0 ? -1f : 1f;
                 referentialShift = Quaternion.FromToRotation(Vector3.forward, new Vector3((1 + _angleCorrection) * mult, 0f, _angleCorrection).normalized);
             }

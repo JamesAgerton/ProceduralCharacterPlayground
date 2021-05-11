@@ -172,6 +172,7 @@ GameObject:
   - component: {fileID: 2513017926775918328}
   - component: {fileID: 2513017926775918308}
   - component: {fileID: 2513017926775918311}
+  - component: {fileID: 1676297363}
   - component: {fileID: 2513017926775918309}
   - component: {fileID: 2513017926775918307}
   - component: {fileID: 2513017926775918329}
@@ -229,11 +230,24 @@ MonoBehaviour:
   _defaultSpeed: 10
   _crouchSpeed: 2.5
   _walkSpeedSmoothTime: 0.05
-  _stepHeight: 0.35
-  _stepSmooth: 0.1
+  _slopeLimit: 55
   _jumpHeight: 4
   _fallMultiplier: 2.5
   _rbDrag: 0
+--- !u!114 &1676297363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2513017926775918304}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fcd5a7f0bdd74e74ca17b49d30088d5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stepUpHeight: 0.7
+  _stepUpDist: 0.5
 --- !u!114 &2513017926775918309
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -253,7 +267,7 @@ MonoBehaviour:
   _walkStrideRadius: 0.5
   _minSpeed: 2.5
   _maxSpeed: 8
-  _groundDistance: 0.4
+  _groundDistance: 1
   _ground:
     serializedVersion: 2
     m_Bits: 1
@@ -406,7 +420,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2513017926775918304}
   serializedVersion: 2
-  m_Mass: 1
+  m_Mass: 62
   m_Drag: 0
   m_AngularDrag: 0.05
   m_UseGravity: 1

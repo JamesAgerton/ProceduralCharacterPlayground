@@ -132,6 +132,19 @@ namespace ProceduralCharacter.Animation
         // Update is called once per frame
         void Update()
         {
+
+            //Find velocity direction and flatten vector
+            CalculateVelocity();
+
+            //Find average acceleration over deltatime
+            CalculateAcceleration();
+
+            //Calculate Stride wheel?
+            CalculateStrideWheel();
+        }
+
+        private void FixedUpdate()
+        {
             Ray ray = new Ray(_body.position + Vector3.up * _groundDistance, Vector3.down);
             if (Physics.Raycast(ray, out _groundHit, _groundDistance + 0.5f, _ground))
             {
@@ -141,20 +154,6 @@ namespace ProceduralCharacter.Animation
             {
                 _isGrounded = false;
             }
-
-            //Find velocity direction and flatten vector
-            CalculateVelocity();
-
-            //Calculate Stride wheel?
-            CalculateStrideWheel();
-
-            //Find average acceleration over deltatime
-            CalculateAcceleration();
-        }
-
-        private void FixedUpdate()
-        {
-
         }
 
         private void OnDrawGizmos()
@@ -185,11 +184,11 @@ namespace ProceduralCharacter.Animation
             Gizmos.color = Color.red;
             Gizmos.DrawLine(transform.position + Vector3.up,
                 transform.position + _accelerationDirection.normalized *
-                _accelerationMagnitude + Vector3.up);
+                (_accelerationMagnitude / _maxAccelerationScale) + Vector3.up);
             Gizmos.DrawWireSphere(transform.position + _accelerationDirection.normalized *
-                _accelerationMagnitude + Vector3.up, 0.1f);
+                (_accelerationMagnitude / _maxAccelerationScale) + Vector3.up, 0.1f);
             Gizmos.DrawLine(transform.position, transform.position + _accelerationDirection.normalized *
-                _accelerationMagnitude + Vector3.up);
+                (_accelerationMagnitude / _maxAccelerationScale) + Vector3.up);
 
             //Draw Stride Wheel
             Gizmos.color = Color.white;

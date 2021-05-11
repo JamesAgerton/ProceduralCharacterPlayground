@@ -56,8 +56,6 @@ namespace ProceduralCharacter.Movement
 
         [Header("Step Up")]
         [SerializeField]
-        float _stepUpHeight = 0.7f;
-        [SerializeField]
         float _slopeLimit = 35f;
 
         [Header("Jumping")]
@@ -243,12 +241,6 @@ namespace ProceduralCharacter.Movement
             return output;
         }
 
-        private void HandleStep()
-        {
-            //Try two rays, one shooting out from the feet, one from the _stepUpHeight
-            //If the bottom ray hits but the top doesn't, then the character should move up 
-            //Otherwise it's a wall or flat ground and it should do nothing.
-        }
         #endregion
     }
 }
