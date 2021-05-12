@@ -72,8 +72,14 @@ namespace ProceduralCharacter.Animation
         private float _minSpeed = 2.5f;
         [SerializeField, Tooltip("The maximum speed the character runs, should match a speed set by the MovementController.")]
         private float _maxSpeed = 8f;   //Velocity magnitude when wheel should be at its largest
+
+        [Header("Ground Check")]
         [SerializeField, Tooltip("Length of the raycast used to check if the character is grounded.")]
         private float _groundDistance = 1f;
+        [SerializeField]
+        private float _groundCheckSphereRadius = 0.3f;
+        [SerializeField]
+        private float _groundCheckOvershoot = 0.1f;
         [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
         public LayerMask _ground;
 
@@ -133,12 +139,6 @@ namespace ProceduralCharacter.Animation
         void Update()
         {
 
-            //Find velocity direction and flatten vector
-            CalculateVelocity();
-
-            //Find average acceleration over deltatime
-            CalculateAcceleration();
-
             //Calculate Stride wheel?
             CalculateStrideWheel();
         }
@@ -146,7 +146,8 @@ namespace ProceduralCharacter.Animation
         private void FixedUpdate()
         {
             Ray ray = new Ray(_body.position + Vector3.up * _groundDistance, Vector3.down);
-            if (Physics.Raycast(ray, out _groundHit, _groundDistance + 0.5f, _ground))
+            //if (Physics.Raycast(ray, out _groundHit, _groundDistance + _groundCheckOvershoot, _ground))
+            if (Physics.SphereCast(ray, _groundCheckSphereRadius, out _groundHit, _groundDistance + _groundCheckOvershoot, _ground))
             {
                 _isGrounded = true;
             }
@@ -154,6 +155,12 @@ namespace ProceduralCharacter.Animation
             {
                 _isGrounded = false;
             }
+
+            //Find velocity direction and flatten vector
+            CalculateVelocity();
+
+            //Find average acceleration over deltatime
+            CalculateAcceleration();
         }
 
         private void OnDrawGizmos()
@@ -162,12 +169,12 @@ namespace ProceduralCharacter.Animation
             if (_isGrounded)
             {
                 Gizmos.color = Color.green;
-                Gizmos.DrawWireSphere(_groundHit.point, 0.3f);
+                Gizmos.DrawWireSphere(_groundHit.point, _groundCheckSphereRadius);
             }
             else
             {
                 Gizmos.color = Color.magenta;
-                Gizmos.DrawWireSphere(transform.position - Vector3.up * 0.5f, 0.3f);
+                Gizmos.DrawWireSphere(transform.position - Vector3.up * _groundCheckOvershoot, _groundCheckSphereRadius);
             }
 
             //Draw Velocity Direction
@@ -240,7 +247,7 @@ namespace ProceduralCharacter.Animation
             _accelerationFlatDirection = Vector3.SmoothDamp(_accelerationFlatDirection, _accelerationFlat, ref _accFlatDirVel, _accelerationFilter);
             
             //rescale?
-            _accelerationMagnitude =Mathf.Clamp(_accelerationDirection.magnitude, 0, _maxAccelerationScale) / _maxAccelerationScale;
+            _accelerationMagnitude = Mathf.Clamp(_accelerationDirection.magnitude, 0, _maxAccelerationScale) / _maxAccelerationScale;
             _accelerationFlatMagnitude = Mathf.Clamp(_accelerationFlatDirection.magnitude, 0, _maxAccelerationScale) / _maxAccelerationScale;
         }
 
@@ -255,7 +262,7 @@ namespace ProceduralCharacter.Animation
             float SpeedTarget = 0f;
             if (_velocityFlat.magnitude > _minSpeed)
             {
-                SpeedTarget = Mathf.Clamp(_velocityFlat.magnitude / _maxSpeed, 0f, 1f);
+                SpeedTarget = Mathf.Clamp((_velocityFlat.magnitude) / (_maxSpeed), 0f, 1f);
             }
             else if (_velocityFlat.magnitude > _velocityLimit)
             {

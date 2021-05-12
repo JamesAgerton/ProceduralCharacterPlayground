@@ -16,17 +16,12 @@
  * Variables:   
  *      _defaultSpeed:          Default movement speed goal.
  *      _crouchSpeed:           Default crouch movement speed goal.
+ *      _sprintSpeed:
+ *      _disabledSpeed:
+ *      
  *      _walkSpeedSmoothTime:   SmoothDamp time for smoothing the current speed.
  *      
- *      _stepHeight:            (Set to negative value to disable)
- *      _stepSmooth:            
  *      _slopeLimit:            (Set to negative value to disable)
- *      
- *      _jumpHeight:            Used to determine the initial velocity of the jump.
- *      _fallMultiplier:        How fast the character falls, a multiplier gives extra control to jump height.
- *      _rbDrag:                The drag value applied to the rigidbody while the character is grounded, this gives
- *                                  the character extra grip and momentum while moving and helps with step up over 
- *                                  obsticles.
  *              
  * Properties:
  *      Speed:                  Public access to the default walking speed.
@@ -39,7 +34,7 @@ using ProceduralCharacter.Animation;
 namespace ProceduralCharacter.Movement
 {
     [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(ProceduralMeasurements))]
-    public class MovementControllerP : MonoBehaviour
+    public class MovementController : MonoBehaviour
     {
         #region Variables(Private)
         private MovementInterpreter _input;
@@ -51,20 +46,19 @@ namespace ProceduralCharacter.Movement
         float _defaultSpeed = 5f;
         [SerializeField, Tooltip("The default movement speed while crouching.")]
         float _crouchSpeed = 2.5f;
+        [SerializeField, Tooltip("The default sprint speed.")]
+        float _sprintSpeed = 10f;
+        [SerializeField, Tooltip("The default speed when movement is disabled.")]
+        float _disabledSpeed = 0f;
+
+        [Space]
         [SerializeField, Tooltip("The time over which a change in speed is smoothed.")]
         float _walkSpeedSmoothTime = 0.1f;
 
-        [Header("Step Up")]
+        [Space]
         [SerializeField]
         float _slopeLimit = 35f;
-
-        [Header("Jumping")]
-        [SerializeField, Tooltip("The desired maximum height of a jump.")]
-        float _jumpHeight = 2f;
-        [SerializeField, Tooltip("A gravity multiplier applied when the jump button is not held.")]
-        float _fallMultiplier = 2.5f;
-        [SerializeField, Tooltip("The drag value on the attached rigidbody.")]
-        private float _rbDrag = 8f;
+        [Space]
 
         float _walkSpeed = 0f;
         float _wSVelocity = 0f;
@@ -72,11 +66,15 @@ namespace ProceduralCharacter.Movement
         float _currentSpeed = 0f;
         float _deltaSpeed = 0f;
 
-        bool _isJumping = false;
-        float jumpVelocity = 0f;
+        bool _isMoving = false;
+
+        //bool _isJumping = false;
+        //float jumpVelocity = 0f;
         #endregion
 
         #region Properties
+        public bool MovementEnable = true;
+        public bool IsMoving => _isMoving;
         public float Speed => _defaultSpeed;
         public float CrouchSpeed => _crouchSpeed;
         #endregion
@@ -94,17 +92,12 @@ namespace ProceduralCharacter.Movement
         void Update()
         {
             HandleGrounding();
-
-            HandleJump();
         }
 
         private void FixedUpdate()
         {
             //Desired XZ plane speed
             HandleMovement();
-
-            //Calculate jump
-            HandleAirtime();
         }
 
         private void OnDrawGizmos()
@@ -157,54 +150,23 @@ namespace ProceduralCharacter.Movement
         #endregion
 
         #region Methods
-        private void HandleJump()
-        {
-            jumpVelocity = Mathf.Sqrt(_jumpHeight * -2f * Physics.gravity.y);
-
-            if (_input.Jump && _measurements.IsGrounded && !_isJumping)
-            {
-                _body.velocity += new Vector3(0f, jumpVelocity, 0f);
-                _body.drag = 0f;
-                _isJumping = true;
-            }
-
-            if (_isJumping && _measurements.IsGrounded && _body.velocity.y <= 0 && !_input.Jump)
-            {
-                _isJumping = false;
-                _body.drag = _rbDrag;
-            }
-        }
-
         private void HandleGrounding()
         {
-            if (!_measurements.IsGrounded)
+            if (!_measurements.IsGrounded || !MovementEnable)   //  Movement is disabled
             {
-                _walkSpeed *= 0.5f;
-                _body.drag = 0f;
+                _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _disabledSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
             }
-            else if (_measurements.IsGrounded && _input.Crouch && !_isJumping)
+            else if (_measurements.IsGrounded && _input.Crouch && MovementEnable)    // Crouch
             {
-                _body.drag = _rbDrag;
                 _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _crouchSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
             }
-            else 
+            else if(_measurements.IsGrounded && _input.Sprint && MovementEnable)     // Sprint
+            {
+                _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _sprintSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
+            }
+            else if(MovementEnable)        // Default/Walk
             {
                 _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _defaultSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
-                _body.drag = _rbDrag;
-            }
-        }
-
-        private void HandleAirtime()
-        {
-            if (_body.velocity.y < 0)
-            {
-                //Character is falling
-                _body.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.deltaTime;
-            }
-            else if (_body.velocity.y > 0 && !_input.Jump)
-            {
-                //use higher multiplier to halt upward momentum
-                _body.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.deltaTime;
             }
         }
 
@@ -222,6 +184,15 @@ namespace ProceduralCharacter.Movement
                 _body.AddForce(desiredDirection * _deltaSpeed, ForceMode.VelocityChange);
                 //_body.velocity += desiredDirection * _deltaSpeed;
             }
+
+            if(_input.MoveDirection != Vector3.zero)
+            {
+                _isMoving = true;
+            }
+            else
+            {
+                _isMoving = false;
+            }
         }
 
         private Vector3 HandleSlope(Vector3 input)
@@ -230,7 +201,7 @@ namespace ProceduralCharacter.Movement
             if (_measurements.IsGrounded && _slopeLimit > 0f)
             {
                 float mult = Mathf.Clamp01((_slopeLimit - Vector3.Angle(_measurements.GroundHit.normal, Vector3.up)) / _slopeLimit);
-                //Debug.Log(mult);
+                Debug.Log(mult);
                 output = Vector3.ProjectOnPlane(input, _measurements.GroundHit.normal).normalized;
                 if(output.y > 0)
                 {
@@ -240,7 +211,6 @@ namespace ProceduralCharacter.Movement
             }
             return output;
         }
-
         #endregion
     }
 }

@@ -172,6 +172,7 @@ GameObject:
   - component: {fileID: 2513017926775918328}
   - component: {fileID: 2513017926775918308}
   - component: {fileID: 2513017926775918311}
+  - component: {fileID: 1676297354}
   - component: {fileID: 1676297363}
   - component: {fileID: 2513017926775918309}
   - component: {fileID: 2513017926775918307}
@@ -229,11 +230,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _defaultSpeed: 10
   _crouchSpeed: 2.5
+  _sprintSpeed: 20
+  _disabledSpeed: 0.1
   _walkSpeedSmoothTime: 0.05
   _slopeLimit: 55
-  _jumpHeight: 4
+  MovementEnable: 1
+--- !u!114 &1676297354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2513017926775918304}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25f1963f7417c094f8284cbe3dea5953, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _jumpHeight: 2
   _fallMultiplier: 2.5
-  _rbDrag: 0
 --- !u!114 &1676297363
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -263,11 +278,13 @@ MonoBehaviour:
   _velocityLimit: 0.1
   _accelerationFilter: 0.5
   _maxAccelerationScale: 5
-  _runStrideRadius: 1.25
+  _runStrideRadius: 2
   _walkStrideRadius: 0.5
   _minSpeed: 2.5
-  _maxSpeed: 8
+  _maxSpeed: 20
   _groundDistance: 1
+  _groundCheckSphereRadius: 0.3
+  _groundCheckOvershoot: 0.001
   _ground:
     serializedVersion: 2
     m_Bits: 1

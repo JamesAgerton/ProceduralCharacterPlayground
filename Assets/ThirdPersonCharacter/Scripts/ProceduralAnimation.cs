@@ -15,12 +15,15 @@ namespace ProceduralCharacter.Animation
 {
 
     [RequireComponent(typeof(ProceduralMeasurements), typeof(MovementInterpreter), typeof(CapsuleCollider))]
+    [RequireComponent(typeof(MovementController))]
     public class ProceduralAnimation : MonoBehaviour
     {
         #region Variables (private)
         private ProceduralMeasurements _measurements;
         private MovementInterpreter _input;
         private CapsuleCollider _collider;
+        private MovementController _movementController;
+
         private Transform _XForm;
         private Transform _XFormTiltPivot;
         private Transform _XFormTurnPivot;
@@ -94,6 +97,7 @@ namespace ProceduralCharacter.Animation
             _measurements = GetComponent<ProceduralMeasurements>();
             _input = GetComponent<MovementInterpreter>();
             _collider = GetComponent<CapsuleCollider>();
+            _movementController = GetComponent<MovementController>();
 
             if (_animator == null)
             {
@@ -204,6 +208,7 @@ namespace ProceduralCharacter.Animation
             _animator.SetBool("IsGrounded", _measurements.IsGrounded);
             _animator.SetFloat("StrideFraction", frac);
             _animator.SetFloat("StrideSpeed", spd);
+            _animator.SetBool("IsMoving", _movementController.IsMoving);
         }
 
         private void HandleBounce()

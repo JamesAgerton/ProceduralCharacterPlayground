@@ -17,7 +17,6 @@ namespace ProceduralCharacter.Movement
         float _stepUpDist = 0.5f;
 
         List<ContactPoint> _allCPs;
-        Vector3 _lastVelocity = Vector3.zero;
 
         #endregion
 
@@ -52,12 +51,10 @@ namespace ProceduralCharacter.Movement
             if (stepUp)
             {
                 //Step up is so FUCKED
-                _body.MovePosition(_body.position + stepUpOffset);
-                //_body.velocity = _lastVelocity;
+                _body.MovePosition(_body.position + stepUpOffset + _input.MoveDirection * _stepUpDist);
             }
 
             _allCPs.Clear();
-            _lastVelocity = velocity;
         }
 
 
@@ -142,7 +139,7 @@ namespace ProceduralCharacter.Movement
                 return false;
             }
 
-            Vector3 stepUpPoint = new Vector3(stepTestCP.point.x, hitInfo.point.y + 0.0001f, stepTestCP.point.z) + (stepTestInvDir * 0.001f);
+            Vector3 stepUpPoint = new Vector3(stepTestCP.point.x, hitInfo.point.y + 0.001f, stepTestCP.point.z) + (stepTestInvDir * 0.001f);
             Vector3 stepUpPointOffset = stepUpPoint - new Vector3(stepTestCP.point.x, groundCP.point.y, stepTestCP.point.z);
 
             stepUpOffset = stepUpPointOffset;
