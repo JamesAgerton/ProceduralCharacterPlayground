@@ -33,13 +33,13 @@ using ProceduralCharacter.Animation;
 
 namespace ProceduralCharacter.Movement
 {
-    [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(ProceduralMeasurements))]
+    [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(SphereCollider))]
     public class MovementController : MonoBehaviour
     {
         #region Variables(Private)
         private MovementInterpreter _input;
         private Rigidbody _body;
-        private ProceduralMeasurements _measurements;
+        private SphereCollider _sphereCollider;
 
         [Header("Speed")]
         [SerializeField, Tooltip("The default movement speed.")]
@@ -54,22 +54,45 @@ namespace ProceduralCharacter.Movement
         [Space]
         [SerializeField, Tooltip("The time over which a change in speed is smoothed.")]
         float _walkSpeedSmoothTime = 0.1f;
+        [SerializeField, Tooltip("The smooth time for changing velocity magnitude.")]
+        float _movementSmoothTime = 0.2f;
+        [SerializeField, Tooltip("The smooth time for changing velocity direction.")]
+        float _directionSmoothTime = 0.05f;
+
+        [Header("Ground Check")]
+        [SerializeField, Tooltip("Length of the raycast used to check if the character is grounded.")]
+        private float _groundDistance = 1f;
+        [SerializeField]
+        private float _groundCheckSphereRadius = 0.3f;
+        [SerializeField]
+        private float _groundCheckOvershoot = 0.1f;
+        [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
+        public LayerMask _ground;
 
         [Space]
         [SerializeField]
         float _slopeLimit = 35f;
+        [SerializeField]
+        AnimationCurve _slopeSpeed;
+        float _slopeYMax = 0f;
         [Space]
 
         float _walkSpeed = 0f;
         float _wSVelocity = 0f;
+
+        bool _slopeCircleGizmo = false;
+        float _desiredSpeedRef = 0f;
+        float _desiredSpeedTime = 0.2f;
         float _desiredSpeed = 0f;
         float _currentSpeed = 0f;
         float _deltaSpeed = 0f;
+        Vector3 _desiredDirectionRef = Vector3.zero;
 
         bool _isMoving = false;
+        bool _isGrounded = false;
+        RaycastHit _groundHit;
 
-        //bool _isJumping = false;
-        //float jumpVelocity = 0f;
+        Vector3 _desiredDirection = Vector3.zero;
         #endregion
 
         #region Properties
@@ -85,7 +108,11 @@ namespace ProceduralCharacter.Movement
         {
             _input = GetComponent<MovementInterpreter>();
             _body = GetComponent<Rigidbody>();
-            _measurements = GetComponent<ProceduralMeasurements>();
+            _sphereCollider = GetComponent<SphereCollider>();
+
+            //_groundDistance = _sphereCollider.radius;
+
+            _slopeYMax = Mathf.Sin(Mathf.Deg2Rad * _slopeLimit);
         }
 
         // Update is called once per frame
@@ -96,93 +123,93 @@ namespace ProceduralCharacter.Movement
 
         private void FixedUpdate()
         {
+            Ray ray = new Ray(_body.position + Vector3.up, Vector3.down);
+            //if (Physics.Raycast(ray, out _groundHit, _groundDistance + _groundCheckOvershoot, _ground))
+            if (Physics.SphereCast(ray, _groundCheckSphereRadius, out _groundHit, _groundDistance + _groundCheckOvershoot, _ground))
+            {
+                _isGrounded = true;
+            }
+            else
+            {
+                _isGrounded = false;
+            }
+
             //Desired XZ plane speed
             HandleMovement();
         }
 
         private void OnDrawGizmos()
         {
-            if (Application.isPlaying)
+            //Draw IsGrounded Sphere
+            if (_isGrounded)
             {
-                //float lowDist = _walkSphere.radius;
-                //float highDist = _walkSphere.radius;
+                Gizmos.color = Color.green;
+                Gizmos.DrawWireSphere(_groundHit.point, _groundCheckSphereRadius);
 
-                //Ray rayForwardLow = new Ray(transform.position + (Vector3.up * 0.05f), _forward);
-                //Ray rayForwardHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _forward);
-                //Ray rayRightLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveright);
-                //Ray rayRightHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveright);
-                //Ray rayLeftLow = new Ray(transform.position + (Vector3.up * 0.05f), _fortyfiveleft);
-                //Ray rayLeftHigh = new Ray(transform.position + (Vector3.up * _stepHeight), _fortyfiveleft);
+                if (_slopeCircleGizmo)
+                {
+                    for (int i = 0; i < 18; i++)
+                    {
+                        Vector3 start = new Vector3(Mathf.Cos(Mathf.Deg2Rad * (i * 20)) * 1, 0, Mathf.Sin(Mathf.Deg2Rad * (i * 20)) * 1);
+                        Vector3 end = new Vector3(Mathf.Cos(Mathf.Deg2Rad * ((i + 1) * 20)) * 1, 0, Mathf.Sin(Mathf.Deg2Rad * ((i + 1) * 20)) * 1);
 
-                //Gizmos.color = Color.white;
-                //if((Physics.Raycast(rayForwardLow, _walkSphere.radius, _measurements.Ground) &&
-                //    !Physics.Raycast(rayForwardHigh, _walkSphere.radius, _measurements.Ground)) ||
-                //    (Physics.Raycast(rayRightLow, _walkSphere.radius, _measurements.Ground) &&
-                //    !Physics.Raycast(rayRightHigh, _walkSphere.radius, _measurements.Ground)) ||
-                //    (Physics.Raycast(rayLeftLow, _walkSphere.radius, _measurements.Ground) &&
-                //    !Physics.Raycast(rayLeftHigh, _walkSphere.radius, _measurements.Ground)) )
-                //{
-                //    Gizmos.color = Color.green;
-                //}
+                        start = HandleSlope(start);
+                        end = HandleSlope(end);
 
-                //Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight), 
-                //    transform.position + Vector3.up * _stepHeight + (_forward * lowDist));
-                //Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f), 
-                //    transform.position + (Vector3.up * 0.05f) + (_forward * highDist));
-                //Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_forward * lowDist),
-                //    transform.position + (Vector3.up * 0.05f) + (_forward * highDist));
-
-                //Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight),
-                //    transform.position + Vector3.up * _stepHeight + (_fortyfiveright * lowDist));
-                //Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f),
-                //    transform.position + (Vector3.up * 0.05f) + (_fortyfiveright * highDist));
-                //Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_fortyfiveright * lowDist),
-                //    transform.position + (Vector3.up * 0.05f) + (_fortyfiveright * highDist));
-
-                //Gizmos.DrawLine(transform.position + (Vector3.up * _stepHeight),
-                //    transform.position + Vector3.up * _stepHeight + (_fortyfiveleft * lowDist));
-                //Gizmos.DrawLine(transform.position + (Vector3.up * 0.05f),
-                //    transform.position + (Vector3.up * 0.05f) + (_fortyfiveleft * highDist));
-                //Gizmos.DrawLine(transform.position + Vector3.up * _stepHeight + (_fortyfiveleft * lowDist),
-                //    transform.position + (Vector3.up * 0.05f) + (_fortyfiveleft * highDist));
+                        Gizmos.DrawLine(start + transform.position, end + transform.position);
+                    }
+                }
             }
+            else
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawWireSphere(transform.position - Vector3.up * _groundCheckOvershoot, _groundCheckSphereRadius);
+            }
+
+            Gizmos.DrawLine(transform.position, transform.position + _desiredDirection);
         }
         #endregion
 
         #region Methods
         private void HandleGrounding()
         {
-            if (!_measurements.IsGrounded || !MovementEnable)   //  Movement is disabled
+            float speed = _walkSpeed;
+            if (MovementEnable && _isGrounded)
             {
-                _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _disabledSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
+                if (_input.Crouch)          // Crouching
+                {
+                    speed = _crouchSpeed;
+                }else if (_input.Sprint)    // Sprint
+                {
+                    speed = _sprintSpeed;
+                }
+                else                        // Default/Walking
+                {
+                    speed = _defaultSpeed;
+                }
             }
-            else if (_measurements.IsGrounded && _input.Crouch && MovementEnable)    // Crouch
+            else                            // Movement is disabled
             {
-                _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _crouchSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
+                speed = _disabledSpeed;
             }
-            else if(_measurements.IsGrounded && _input.Sprint && MovementEnable)     // Sprint
-            {
-                _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _sprintSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
-            }
-            else if(MovementEnable)        // Default/Walk
-            {
-                _walkSpeed = Mathf.SmoothDamp(_walkSpeed, _defaultSpeed, ref _wSVelocity, _walkSpeedSmoothTime);
-            }
+
+            _walkSpeed = Mathf.SmoothDamp(_walkSpeed, speed, ref _wSVelocity, _walkSpeedSmoothTime);
         }
 
         private void HandleMovement()
         {
             _desiredSpeed = _input.MoveDirection.magnitude * _walkSpeed;
-            _currentSpeed = _measurements.VelocityFlat.magnitude;
-            _deltaSpeed = _desiredSpeed - _currentSpeed;
-            _deltaSpeed = Mathf.Clamp(_deltaSpeed, 0f, 1000f);
+            _currentSpeed = (new Vector3(_body.velocity.x, 0f, _body.velocity.z)).magnitude;
+            _deltaSpeed = Mathf.SmoothDamp(_currentSpeed, _desiredSpeed, ref _desiredSpeedRef, _desiredSpeedTime);
 
-            Vector3 desiredDirection = _input.MoveDirection;
-            desiredDirection = HandleSlope(desiredDirection);
-            if (Mathf.Abs(_deltaSpeed) > 0.5f)
+            _desiredDirection = Vector3.SmoothDamp(_desiredDirection, _input.MoveDirection, ref _desiredDirectionRef, _directionSmoothTime);
+            _desiredDirection = HandleSlope(_desiredDirection.normalized);
+
+            float y = _body.velocity.y;
+
+            if (_isGrounded)
             {
-                _body.AddForce(desiredDirection * _deltaSpeed, ForceMode.VelocityChange);
-                //_body.velocity += desiredDirection * _deltaSpeed;
+                _body.velocity = (_desiredDirection * _deltaSpeed);
             }
 
             if(_input.MoveDirection != Vector3.zero)
@@ -198,16 +225,19 @@ namespace ProceduralCharacter.Movement
         private Vector3 HandleSlope(Vector3 input)
         {
             Vector3 output = input;
-            if (_measurements.IsGrounded && _slopeLimit > 0f)
+            if (_isGrounded && _slopeLimit > 0f)
             {
-                float mult = Mathf.Clamp01((_slopeLimit - Vector3.Angle(_measurements.GroundHit.normal, Vector3.up)) / _slopeLimit);
-                Debug.Log(mult);
-                output = Vector3.ProjectOnPlane(input, _measurements.GroundHit.normal).normalized;
-                if(output.y > 0)
-                {
-                    //output = new Vector3(output.x, output.y * mult, output.z);
-                    output *= mult;
-                }
+                output = Vector3.ProjectOnPlane(input, _groundHit.normal);
+                float ym = _slopeSpeed.Evaluate(Mathf.Sin(Mathf.Deg2Rad * Vector3.Angle(Vector3.up, _groundHit.normal)) / _slopeYMax);
+                float yi = output.normalized.y;
+                float frac = Mathf.Clamp(yi / _slopeYMax, -1f, 1f);
+
+                float mapped = _slopeSpeed.Evaluate(frac);
+
+                float mult = mapped;
+
+                output *= mult;
+                output.y = Mathf.Clamp(output.y, -50f, ym);
             }
             return output;
         }

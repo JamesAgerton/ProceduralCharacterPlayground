@@ -210,7 +210,9 @@ namespace ProceduralCharacter.Animation
                 float zinCoord = _currentStrideRadius * div * Mathf.Cos(angle);
                 float yCoord = _currentStrideRadius * Mathf.Sin(angle);
                 float yinCoord = _currentStrideRadius * div * Mathf.Sin(angle);
-                Gizmos.DrawLine(
+                if(transform.childCount > 0)
+                {
+                    Gizmos.DrawLine(
                     transform.GetChild(0).TransformPoint(
                         new Vector3(0f, yinCoord + _currentStrideRadius, -zinCoord)) -
                         transform.GetChild(0).position + transform.position,
@@ -218,6 +220,7 @@ namespace ProceduralCharacter.Animation
                         new Vector3(0f, yCoord + _currentStrideRadius, -zCoord)) -
                         transform.GetChild(0).position + transform.position
                     );
+                }
             }
         }
         #endregion

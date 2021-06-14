@@ -89,34 +89,41 @@ namespace ProceduralCharacter.Movement
                 (Vector3.Cross(stick.normalized, Vector3.forward).y >= 0f ? -1f : 1f);
             Vector3 camDir = _cameraTransform.forward;
             camDir.y = 0f;
+            camDir = camDir.normalized;
             Vector3 correctionDir = new Vector3(1 + _angleCorrection, 0f, _angleCorrection).normalized;
             Vector3 antiCorrectionDir = new Vector3((1 + _angleCorrection) * -1f, 0f, _angleCorrection).normalized;
 
+            //Draw a Circle
+            Gizmos.color = Color.grey;
+            for (int i = 0; i < 18; i++)
+            {
+                Vector3 start = new Vector3(Mathf.Cos(Mathf.Deg2Rad * (i * 20)) * GizmoRadius, 0, Mathf.Sin(Mathf.Deg2Rad * (i * 20)) * GizmoRadius);
+                Vector3 end = new Vector3(Mathf.Cos(Mathf.Deg2Rad * ((i + 1) * 20)) * GizmoRadius, 0, Mathf.Sin(Mathf.Deg2Rad * ((i + 1) * 20)) * GizmoRadius);
+
+                Gizmos.DrawLine(start + transform.position, end + transform.position);
+            }
+
             //Draw moveStick
-            //Handles.color = Color.grey;
-            //Handles.DrawWireDisc(transform.position, transform.up, GizmoRadius);
-            //Handles.DrawWireArc(transform.position, transform.up, Vector3.forward, stickAngle, stick.magnitude);
             Gizmos.color = Color.grey;
             Gizmos.DrawSphere(stickPos, 0.1f);
             Gizmos.DrawLine(transform.position, stickPos);
             Gizmos.DrawLine(transform.position, Vector3.forward + transform.position);
 
             //Draw moveDirection
-            //Handles.color = Color.cyan;
-            //Handles.DrawSolidArc(transform.position, transform.up, camDir, _angle, stick.magnitude / 2f);
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(transform.position + (_moveDirection * GizmoRadius), 0.11f);
             Gizmos.DrawLine(transform.position, transform.position + (_moveDirection * GizmoRadius));
 
-            //Draw root
-            Gizmos.DrawLine(transform.position, transform.position + transform.forward * stick.magnitude / 2f);
-
             //Draw CameraDirection
-            //Handles.color = Color.red;
-            //Handles.DrawWireArc(transform.position, transform.up, camDir, -7f, GizmoRadius);
-            //Handles.DrawWireArc(transform.position, transform.up, camDir, 7f, GizmoRadius);
             Gizmos.color = Color.red;
-            Gizmos.DrawLine(transform.position + camDir * (GizmoRadius - 0.2f), transform.position + camDir * (GizmoRadius + 0.2f));
+            Vector3 interior = transform.position + camDir * (GizmoRadius - 0.2f);
+            Vector3 exterior = transform.position + camDir * (GizmoRadius + 0.2f);
+            interior.y = transform.position.y;
+            exterior.y = transform.position.y;
+            Gizmos.DrawLine(interior + _cameraTransform.right * 0.05f, exterior + _cameraTransform.right * 0.1f);
+            Gizmos.DrawLine(interior + _cameraTransform.right * -0.05f, exterior + _cameraTransform.right * -0.1f);
+            Gizmos.DrawLine(interior + _cameraTransform.right * 0.05f, interior + _cameraTransform.right * -0.05f);
+            Gizmos.DrawLine(exterior + _cameraTransform.right * 0.1f, exterior + _cameraTransform.right * -0.1f);
 
             //Draw Correction range
             Gizmos.DrawLine(transform.position + (correctionDir * (GizmoRadius - 0.2f)), transform.position + (correctionDir * (GizmoRadius + 0.2f)));
