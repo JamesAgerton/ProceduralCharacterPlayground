@@ -80,6 +80,7 @@ namespace ProceduralCharacter.Movement
         float _walkSpeed = 0f;
         float _wSVelocity = 0f;
 
+        [SerializeField]
         bool _slopeCircleGizmo = false;
         float _desiredSpeedRef = 0f;
         float _desiredSpeedTime = 0.2f;
@@ -148,10 +149,11 @@ namespace ProceduralCharacter.Movement
 
                 if (_slopeCircleGizmo)
                 {
-                    for (int i = 0; i < 18; i++)
+                    int x = 36;
+                    for (int i = 0; i < x; i++)
                     {
-                        Vector3 start = new Vector3(Mathf.Cos(Mathf.Deg2Rad * (i * 20)) * 1, 0, Mathf.Sin(Mathf.Deg2Rad * (i * 20)) * 1);
-                        Vector3 end = new Vector3(Mathf.Cos(Mathf.Deg2Rad * ((i + 1) * 20)) * 1, 0, Mathf.Sin(Mathf.Deg2Rad * ((i + 1) * 20)) * 1);
+                        Vector3 start = new Vector3(Mathf.Cos(Mathf.Deg2Rad * (i * (360 / x))) * 1, 0, Mathf.Sin(Mathf.Deg2Rad * (i * (360 / x))) * 1);
+                        Vector3 end = new Vector3(Mathf.Cos(Mathf.Deg2Rad * ((i + 1) * (360 / x))) * 1, 0, Mathf.Sin(Mathf.Deg2Rad * ((i + 1) * (360 / x))) * 1);
 
                         start = HandleSlope(start);
                         end = HandleSlope(end);
@@ -228,16 +230,18 @@ namespace ProceduralCharacter.Movement
             if (_isGrounded && _slopeLimit > 0f)
             {
                 output = Vector3.ProjectOnPlane(input, _groundHit.normal);
-                float ym = _slopeSpeed.Evaluate(Mathf.Sin(Mathf.Deg2Rad * Vector3.Angle(Vector3.up, _groundHit.normal)) / _slopeYMax);
-                float yi = output.normalized.y;
-                float frac = Mathf.Clamp(yi / _slopeYMax, -1f, 1f);
+                float ya = _slopeSpeed.Evaluate(Mathf.Sin(Mathf.Deg2Rad * Vector3.Angle(Vector3.up, _groundHit.normal)) / _slopeYMax);
+                float yA = output.normalized.y;
+
+                float X = (yA == 0 || ya == 0) ? 0 : ya / yA;
+
+                float frac = Mathf.Clamp(yA / _slopeYMax, -1f, 1f);
 
                 float mapped = _slopeSpeed.Evaluate(frac);
 
-                float mult = mapped;
+                float mult = yA > ya ? X : mapped;
 
                 output *= mult;
-                output.y = Mathf.Clamp(output.y, -50f, ym);
             }
             return output;
         }
