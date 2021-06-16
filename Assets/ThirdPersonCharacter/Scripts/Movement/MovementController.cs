@@ -39,7 +39,7 @@ namespace ProceduralCharacter.Movement
         #region Variables(Private)
         private MovementInterpreter _input;
         private Rigidbody _body;
-        private SphereCollider _sphereCollider;
+        //private SphereCollider _sphereCollider;
 
         [Header("Speed")]
         [SerializeField, Tooltip("The default movement speed.")]
@@ -69,13 +69,12 @@ namespace ProceduralCharacter.Movement
         [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
         public LayerMask _ground;
 
-        [Space]
+        [Header("Slope Check")]
         [SerializeField]
         float _slopeLimit = 35f;
         [SerializeField]
         AnimationCurve _slopeSpeed;
         float _slopeYMax = 0f;
-        [Space]
 
         float _walkSpeed = 0f;
         float _wSVelocity = 0f;
@@ -88,6 +87,11 @@ namespace ProceduralCharacter.Movement
         float _currentSpeed = 0f;
         float _deltaSpeed = 0f;
         Vector3 _desiredDirectionRef = Vector3.zero;
+
+        [Header("Step Up")]
+        [SerializeField]
+        float _stepHeight = 0.5f;
+
 
         bool _isMoving = false;
         bool _isGrounded = false;
@@ -109,7 +113,7 @@ namespace ProceduralCharacter.Movement
         {
             _input = GetComponent<MovementInterpreter>();
             _body = GetComponent<Rigidbody>();
-            _sphereCollider = GetComponent<SphereCollider>();
+            //_sphereCollider = GetComponent<SphereCollider>();
 
             //_groundDistance = _sphereCollider.radius;
 
@@ -244,6 +248,11 @@ namespace ProceduralCharacter.Movement
                 output *= mult;
             }
             return output;
+        }
+
+        private void HandleStep()
+        {
+
         }
         #endregion
     }
