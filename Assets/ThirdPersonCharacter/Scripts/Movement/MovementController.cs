@@ -38,36 +38,57 @@ namespace ProceduralCharacter.Movement
     {
         #region Variables(Private)
         private MovementInterpreter _input;
-        private Rigidbody _body;
+        private Rigidbody _RB;
         //private SphereCollider _sphereCollider;
 
-        [Header("Speed")]
-        [SerializeField, Tooltip("The default movement speed.")]
-        float _defaultSpeed = 5f;
-        [SerializeField, Tooltip("The default movement speed while crouching.")]
-        float _crouchSpeed = 2.5f;
-        [SerializeField, Tooltip("The default sprint speed.")]
-        float _sprintSpeed = 10f;
-        [SerializeField, Tooltip("The default speed when movement is disabled.")]
-        float _disabledSpeed = 0f;
-
-        [Space]
-        [SerializeField, Tooltip("The time over which a change in speed is smoothed.")]
-        float _walkSpeedSmoothTime = 0.1f;
-        [SerializeField, Tooltip("The smooth time for changing velocity magnitude.")]
-        float _movementSmoothTime = 0.2f;
-        [SerializeField, Tooltip("The smooth time for changing velocity direction.")]
-        float _directionSmoothTime = 0.05f;
-
-        [Header("Ground Check")]
-        [SerializeField, Tooltip("Length of the raycast used to check if the character is grounded.")]
-        private float _groundDistance = 1f;
+        [Header("Grounding")]
+        Vector3 DownDir = Vector3.down;
         [SerializeField]
-        private float _groundCheckSphereRadius = 0.3f;
+        float _rayLength = 2f;
         [SerializeField]
-        private float _groundCheckOvershoot = 0.1f;
+        float _RideHeight = 1f;
+        [SerializeField]
+        float _RideSpringStrength = 10f;
+        [SerializeField]
+        float _RideSpringDamper = 10f;
         [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
         public LayerMask _ground;
+
+        Vector3 _groundVel = Vector3.zero;
+
+        [Header("Speed")]
+        [SerializeField]
+        float _MaxSpeed = 8f;
+
+        [SerializeField]
+        float _Acceleration = 200f;
+        [SerializeField]
+        AnimationCurve _AccelerationFactorFromDot;
+        [SerializeField]
+        float _MaxAccelForce = 150f;
+        [SerializeField]
+        AnimationCurve _MaxAccelerationForceFactorFromDot;
+        [SerializeField]
+        Vector3 _ForceScale = Vector3.zero;
+        [SerializeField]
+        float _GravityScaleDrop = 10f;
+
+        [Space]
+        [SerializeField]
+        float _sprintFactor = 1.5f;
+        [SerializeField]
+        float _walkFactor = 0.5f;
+        [SerializeField]
+        float _crouchFactor = 0.4f;
+        [SerializeField]
+        float _disabledFactor = 0.1f;
+        [Space]
+        [SerializeField]
+        float _speedFactorSmoothTime = 0.01f;
+        float _speedFactor = 1f;
+        float _speedRefVel = 0f;
+
+        Vector3 _GoalVel = Vector3.zero;
 
         [Header("Slope Check")]
         [SerializeField]
@@ -76,35 +97,20 @@ namespace ProceduralCharacter.Movement
         AnimationCurve _slopeSpeed;
         float _slopeYMax = 0f;
 
-        float _walkSpeed = 0f;
-        float _wSVelocity = 0f;
-
         [SerializeField]
         bool _slopeCircleGizmo = false;
-        float _desiredSpeedRef = 0f;
-        float _desiredSpeedTime = 0.2f;
-        float _desiredSpeed = 0f;
-        float _currentSpeed = 0f;
-        float _deltaSpeed = 0f;
-        Vector3 _desiredDirectionRef = Vector3.zero;
-
-        [Header("Step Up")]
-        [SerializeField]
-        float _stepHeight = 0.5f;
 
 
         bool _isMoving = false;
         bool _isGrounded = false;
-        RaycastHit _groundHit;
+        RaycastHit _rayHit;
 
-        Vector3 _desiredDirection = Vector3.zero;
+        Vector3 _UnitGoal = Vector3.zero;
         #endregion
 
         #region Properties
         public bool MovementEnable = true;
         public bool IsMoving => _isMoving;
-        public float Speed => _defaultSpeed;
-        public float CrouchSpeed => _crouchSpeed;
         #endregion
 
         #region UnityMethods
@@ -112,10 +118,7 @@ namespace ProceduralCharacter.Movement
         void Start()
         {
             _input = GetComponent<MovementInterpreter>();
-            _body = GetComponent<Rigidbody>();
-            //_sphereCollider = GetComponent<SphereCollider>();
-
-            //_groundDistance = _sphereCollider.radius;
+            _RB = GetComponent<Rigidbody>();
 
             _slopeYMax = Mathf.Sin(Mathf.Deg2Rad * _slopeLimit);
         }
@@ -123,14 +126,13 @@ namespace ProceduralCharacter.Movement
         // Update is called once per frame
         void Update()
         {
-            HandleGrounding();
+            HandleSpeedFactor();
         }
 
         private void FixedUpdate()
         {
-            Ray ray = new Ray(_body.position + Vector3.up, Vector3.down);
-            //if (Physics.Raycast(ray, out _groundHit, _groundDistance + _groundCheckOvershoot, _ground))
-            if (Physics.SphereCast(ray, _groundCheckSphereRadius, out _groundHit, _groundDistance + _groundCheckOvershoot, _ground))
+            Ray ray = new Ray(_RB.position + Vector3.up, Vector3.down);
+            if (Physics.Raycast(ray, out _rayHit, _rayLength, _ground))
             {
                 _isGrounded = true;
             }
@@ -139,6 +141,16 @@ namespace ProceduralCharacter.Movement
                 _isGrounded = false;
             }
 
+            if(_isGrounded && _rayHit.rigidbody != null)
+            {
+                _groundVel = _rayHit.rigidbody.velocity;
+            }
+            else
+            {
+                _groundVel = Vector3.zero;
+            }
+
+            HandleGrounding();
             //Desired XZ plane speed
             HandleMovement();
         }
@@ -149,7 +161,7 @@ namespace ProceduralCharacter.Movement
             if (_isGrounded)
             {
                 Gizmos.color = Color.green;
-                Gizmos.DrawWireSphere(_groundHit.point, _groundCheckSphereRadius);
+                Gizmos.DrawWireSphere(_rayHit.point, 0.1f);
 
                 if (_slopeCircleGizmo)
                 {
@@ -166,65 +178,102 @@ namespace ProceduralCharacter.Movement
                     }
                 }
             }
-            else
-            {
-                Gizmos.color = Color.magenta;
-                Gizmos.DrawWireSphere(transform.position - Vector3.up * _groundCheckOvershoot, _groundCheckSphereRadius);
-            }
 
-            Gizmos.DrawLine(transform.position, transform.position + _desiredDirection);
+            //Gizmos.DrawLine(transform.position, transform.position + _desiredDirection);
         }
         #endregion
 
         #region Methods
         private void HandleGrounding()
         {
-            float speed = _walkSpeed;
-            if (MovementEnable && _isGrounded)
+            if (_isGrounded)
             {
-                if (_input.Crouch)          // Crouching
+                Vector3 vel = _RB.velocity;
+                Vector3 rayDir = transform.TransformDirection(DownDir);
+
+                Vector3 otherVel = Vector3.zero;
+                Rigidbody hitBody = _rayHit.rigidbody;
+                if (hitBody != null)
                 {
-                    speed = _crouchSpeed;
-                }else if (_input.Sprint)    // Sprint
-                {
-                    speed = _sprintSpeed;
+                    otherVel = hitBody.velocity;
                 }
-                else                        // Default/Walking
+
+                float rayDirVel = Vector3.Dot(rayDir, vel);
+                float otherDirVel = Vector3.Dot(rayDir, otherVel);
+
+                float relVel = rayDirVel - otherDirVel;
+
+                float x = _rayHit.distance - _RideHeight;
+
+                float springForce = (x * _RideSpringStrength) - (relVel * _RideSpringDamper);
+
+                //Debug.DrawLine(transform.position, transform.position + (rayDir * springForce), Color.yellow);
+
+                _RB.AddForce(rayDir * springForce);
+
+                if (hitBody != null)
                 {
-                    speed = _defaultSpeed;
+                    hitBody.AddForceAtPosition(rayDir * -springForce, _rayHit.point);
                 }
             }
-            else                            // Movement is disabled
+        }
+
+        private void HandleSpeedFactor()
+        {
+            float speed = _walkFactor;
+            if(MovementEnable && _isGrounded)
             {
-                speed = _disabledSpeed;
+                if (_input.Crouch)
+                {
+                    speed = _crouchFactor;
+                }else if (_input.Sprint)
+                {
+                    speed = _sprintFactor;
+                }
+                else
+                {
+                    speed = 1f;
+                }
+            }
+            else
+            {
+                speed = 1f; //_disabledFactor;
             }
 
-            _walkSpeed = Mathf.SmoothDamp(_walkSpeed, speed, ref _wSVelocity, _walkSpeedSmoothTime);
+            _speedFactor = Mathf.SmoothDamp(_speedFactor, speed, ref _speedRefVel, _speedFactorSmoothTime);
         }
 
         private void HandleMovement()
         {
-            _desiredSpeed = _input.MoveDirection.magnitude * _walkSpeed;
-            _currentSpeed = (new Vector3(_body.velocity.x, 0f, _body.velocity.z)).magnitude;
-            _deltaSpeed = Mathf.SmoothDamp(_currentSpeed, _desiredSpeed, ref _desiredSpeedRef, _desiredSpeedTime);
-
-            _desiredDirection = Vector3.SmoothDamp(_desiredDirection, _input.MoveDirection, ref _desiredDirectionRef, _directionSmoothTime);
-            _desiredDirection = HandleSlope(_desiredDirection.normalized);
-
-            float y = _body.velocity.y;
-
             if (_isGrounded)
             {
-                _body.velocity = (_desiredDirection * _deltaSpeed);
-            }
+                //input ...
+                _UnitGoal = HandleSlope(_input.MoveDirection);
+                if (_UnitGoal.magnitude > 1f)
+                {
+                    _UnitGoal.Normalize();
+                }
 
-            if(_input.MoveDirection != Vector3.zero)
-            {
-                _isMoving = true;
-            }
-            else
-            {
-                _isMoving = false;
+                //calculate new goal vel...
+                Vector3 unitVel = _GoalVel.normalized;
+
+                float velDot = Vector3.Dot(_UnitGoal, unitVel);
+
+                float accel = _Acceleration * _AccelerationFactorFromDot.Evaluate(velDot);
+
+                Vector3 goalVel = _UnitGoal * _MaxSpeed * _speedFactor;
+
+                _GoalVel = Vector3.MoveTowards(_GoalVel, (goalVel) + (_groundVel),
+                    accel * Time.fixedDeltaTime);
+
+                //Actual force...
+                Vector3 neededAccel = (_GoalVel - _RB.velocity) / Time.fixedDeltaTime;
+
+                float maxAccel = _MaxAccelForce * _MaxAccelerationForceFactorFromDot.Evaluate(velDot);// * _maxAccelForceFactor;
+
+                neededAccel = Vector3.ClampMagnitude(neededAccel, maxAccel);
+
+                _RB.AddForce(Vector3.Scale(neededAccel * _RB.mass, _ForceScale));
             }
         }
 
@@ -233,8 +282,8 @@ namespace ProceduralCharacter.Movement
             Vector3 output = input;
             if (_isGrounded && _slopeLimit > 0f)
             {
-                output = Vector3.ProjectOnPlane(input, _groundHit.normal);
-                float ya = _slopeSpeed.Evaluate(Mathf.Sin(Mathf.Deg2Rad * Vector3.Angle(Vector3.up, _groundHit.normal)) / _slopeYMax);
+                output = Vector3.ProjectOnPlane(input, _rayHit.normal);
+                float ya = _slopeSpeed.Evaluate(Mathf.Sin(Mathf.Deg2Rad * Vector3.Angle(Vector3.up, _rayHit.normal)) / _slopeYMax);
                 float yA = output.normalized.y;
 
                 float X = (yA == 0 || ya == 0) ? 0 : ya / yA;
@@ -248,11 +297,6 @@ namespace ProceduralCharacter.Movement
                 output *= mult;
             }
             return output;
-        }
-
-        private void HandleStep()
-        {
-
         }
         #endregion
     }
