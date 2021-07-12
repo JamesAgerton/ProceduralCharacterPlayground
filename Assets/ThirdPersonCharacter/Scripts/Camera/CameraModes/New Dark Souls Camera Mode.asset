@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: New Dark Souls Camera Mode
   m_EditorClassIdentifier: 
   Tools: {fileID: 11400000, guid: 1883d45486b693449b8afd2545d7fb5c, type: 2}
-  distance: {x: 3, y: 1.5}
-  RotationDegreePerSecond: 180
+  distance: {x: 6.6, y: 1.5}
+  RotationDegreePerSecond: 540
   AngleMaxMin: {x: 50, y: -80}

@@ -53,6 +53,12 @@ namespace ProceduralCharacter.Movement
         float _RideSpringDamper = 10f;
         [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
         public LayerMask _ground;
+        [SerializeField]
+        float _torqueStrength = 1000f;
+        [SerializeField]
+        float _torqueDamping = 100f;
+        [SerializeField]
+        Quaternion _uprightRotation = Quaternion.identity;
 
         Vector3 _groundVel = Vector3.zero;
 
@@ -70,8 +76,6 @@ namespace ProceduralCharacter.Movement
         AnimationCurve _MaxAccelerationForceFactorFromDot;
         [SerializeField]
         Vector3 _ForceScale = Vector3.zero;
-        [SerializeField]
-        float _GravityScaleDrop = 10f;
 
         [Space]
         [SerializeField]
@@ -100,6 +104,16 @@ namespace ProceduralCharacter.Movement
         [SerializeField]
         bool _slopeCircleGizmo = false;
 
+        [Header("Jump")]
+        [SerializeField]
+        float _jumpHeight = 2f;
+        [SerializeField]
+        float _fallMultiplier = 2.5f;
+
+        float _jumpVelocity = 0f;
+
+        bool _disableGrounding = false;     //Turns off the grounding/float forces to allow the character to jump
+        bool _disableGroundingLock = false; //Makes it so that _disableGrounding must remain off until the Jump input is released
 
         bool _isMoving = false;
         bool _isGrounded = false;
@@ -111,6 +125,7 @@ namespace ProceduralCharacter.Movement
         #region Properties
         public bool MovementEnable = true;
         public bool IsMoving => _isMoving;
+        public RaycastHit GroundHitInfo => _rayHit;
         #endregion
 
         #region UnityMethods
@@ -121,6 +136,8 @@ namespace ProceduralCharacter.Movement
             _RB = GetComponent<Rigidbody>();
 
             _slopeYMax = Mathf.Sin(Mathf.Deg2Rad * _slopeLimit);
+
+            _uprightRotation = transform.rotation;
         }
 
         // Update is called once per frame
@@ -143,16 +160,20 @@ namespace ProceduralCharacter.Movement
 
             if(_isGrounded && _rayHit.rigidbody != null)
             {
-                _groundVel = _rayHit.rigidbody.velocity;
+                _groundVel = _rayHit.rigidbody.GetPointVelocity(_rayHit.point);
             }
             else
             {
                 _groundVel = Vector3.zero;
             }
 
+            HandleJump();
+
             HandleGrounding();
             //Desired XZ plane speed
             HandleMovement();
+
+            UpdateUprightForce();
         }
 
         private void OnDrawGizmos()
@@ -186,7 +207,7 @@ namespace ProceduralCharacter.Movement
         #region Methods
         private void HandleGrounding()
         {
-            if (_isGrounded)
+            if (_isGrounded && !_disableGrounding)
             {
                 Vector3 vel = _RB.velocity;
                 Vector3 rayDir = transform.TransformDirection(DownDir);
@@ -214,6 +235,19 @@ namespace ProceduralCharacter.Movement
                 if (hitBody != null)
                 {
                     hitBody.AddForceAtPosition(rayDir * -springForce, _rayHit.point);
+                }
+            }
+            else
+            {
+                if (_RB.velocity.y < 0)
+                {
+                    //Character is falling (probably)
+                    _RB.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.fixedDeltaTime;
+                }
+                else if (_RB.velocity.y > 0 && !_input.Jump)
+                {
+                    //use higher multiplier to halt upward momentum
+                    _RB.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.fixedDeltaTime;
                 }
             }
         }
@@ -297,6 +331,77 @@ namespace ProceduralCharacter.Movement
                 output *= mult;
             }
             return output;
+        }
+
+        void HandleJump()
+        {
+            _jumpVelocity = Mathf.Sqrt(_jumpHeight * -2f * Physics.gravity.y);
+
+            if (_input.Jump)
+            {
+                if (_isGrounded)
+                {
+                    if (!_disableGroundingLock)
+                    {
+                        _disableGrounding = true;
+                        Vector3 jumpForce = (new Vector3(0f, _jumpVelocity, 0f) / Time.fixedDeltaTime) * _RB.mass;
+                        _disableGrounding = true;
+                        _disableGroundingLock = true;
+                        //MovementEnable = !_isJumping;
+
+                        //_RB.velocity += (jumpForce);
+                        _RB.AddForce(jumpForce);
+
+                        Rigidbody otherRB = _rayHit.rigidbody;
+                        if (otherRB != null)
+                        {
+                            otherRB.AddForceAtPosition(-jumpForce, _rayHit.point);
+                        }
+                    }
+                }
+                else
+                {
+                    _disableGrounding = false;
+                }
+            }
+            else
+            {
+                _disableGrounding = false;
+                _disableGroundingLock = false;
+            }
+        }
+
+        void UpdateUprightForce()
+        {
+            Quaternion current = transform.rotation;
+            Quaternion toGoal = ShortestRotation(_uprightRotation, current);
+
+            Vector3 rotAxis;
+            float rotDegrees;
+
+            toGoal.ToAngleAxis(out rotDegrees, out rotAxis);
+            rotAxis.Normalize();
+
+            float rotRadians = rotDegrees * Mathf.Deg2Rad;
+
+            _RB.AddTorque((rotAxis * (rotRadians * _torqueStrength)) - (_RB.angularVelocity * _torqueDamping));
+        }
+
+        Quaternion ShortestRotation(Quaternion a, Quaternion b)
+        {
+            if (Quaternion.Dot(a, b) < 0)
+            {
+                return a * Quaternion.Inverse(Multiply(b, -1));
+            }
+            else
+            {
+                return a * Quaternion.Inverse(b);
+            }
+        }
+
+        Quaternion Multiply(Quaternion input, float scalar)
+        {
+            return new Quaternion(input.x * scalar, input.y * scalar, input.z * scalar, input.w * scalar);
         }
         #endregion
     }
