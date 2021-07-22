@@ -85,6 +85,8 @@ namespace ProceduralCharacter.Movement
         [SerializeField]
         float _crouchFactor = 0.4f;
         [SerializeField]
+        float _inAirFactor = 0.2f;
+        [SerializeField]
         float _disabledFactor = 0.1f;
         [Space]
         [SerializeField]
@@ -255,23 +257,27 @@ namespace ProceduralCharacter.Movement
         private void HandleSpeedFactor()
         {
             float speed = _walkFactor;
-            if(MovementEnable && _isGrounded)
+            if(MovementEnable)
             {
-                if (_input.Crouch)
+                if (_isGrounded)
                 {
-                    speed = _crouchFactor;
-                }else if (_input.Sprint)
-                {
-                    speed = _sprintFactor;
+                    if (_input.Crouch)
+                    {
+                        speed = _crouchFactor;
+                    }
+                    else if (_input.Sprint)
+                    {
+                        speed = _sprintFactor;
+                    }
                 }
                 else
                 {
-                    speed = 1f;
+                    speed = _inAirFactor;
                 }
             }
             else
             {
-                speed = 1f; //_disabledFactor;
+                speed = _disabledFactor;
             }
 
             _speedFactor = Mathf.SmoothDamp(_speedFactor, speed, ref _speedRefVel, _speedFactorSmoothTime);
@@ -279,15 +285,15 @@ namespace ProceduralCharacter.Movement
 
         private void HandleMovement()
         {
+            //input ...
+            _UnitGoal = HandleSlope(_input.MoveDirection);
+            if (_UnitGoal.magnitude > 1f)
+            {
+                _UnitGoal.Normalize();
+            }
+
             if (_isGrounded)
             {
-                //input ...
-                _UnitGoal = HandleSlope(_input.MoveDirection);
-                if (_UnitGoal.magnitude > 1f)
-                {
-                    _UnitGoal.Normalize();
-                }
-
                 //calculate new goal vel...
                 Vector3 unitVel = _GoalVel.normalized;
 
@@ -306,6 +312,13 @@ namespace ProceduralCharacter.Movement
                 float maxAccel = _MaxAccelForce * _MaxAccelerationForceFactorFromDot.Evaluate(velDot);// * _maxAccelForceFactor;
 
                 neededAccel = Vector3.ClampMagnitude(neededAccel, maxAccel);
+
+                _RB.AddForce(Vector3.Scale(neededAccel * _RB.mass, _ForceScale));
+            }
+            else
+            {
+                Vector3 neededAccel = _UnitGoal * _MaxSpeed * _speedFactor;
+                neededAccel = Vector3.ClampMagnitude(neededAccel, _MaxAccelForce);
 
                 _RB.AddForce(Vector3.Scale(neededAccel * _RB.mass, _ForceScale));
             }
