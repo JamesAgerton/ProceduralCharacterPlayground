@@ -8258,6 +8258,7 @@ MonoBehaviour:
   _sprintFactor: 1.5
   _walkFactor: 0.5
   _crouchFactor: 0.4
+  _inAirFactor: 0.2
   _disabledFactor: 0.1
   _speedFactorSmoothTime: 0.01
   _slopeLimit: 45
@@ -8303,7 +8304,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  _slopeCircleGizmo: 1
+  _slopeCircleGizmo: 0
   _jumpHeight: 2
   _fallMultiplier: 2.5
   MovementEnable: 1
