@@ -906,7 +906,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh17948
+  m_Name: pb_Mesh17870
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -3353,7 +3353,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5e148de6cdf2d164aa3e3f90ce8c852c, type: 2}
+  - {fileID: 2100000, guid: 663834164c6a04740aaa1b778249ce7e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7912,7 +7912,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh17722
+  m_Name: pb_Mesh17644
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -8162,7 +8162,99 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52e00920c2d148d4588a858bc22dbe5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _accelScale: 800
+  _strideWeightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 1.500205
+      outSlope: 1.500205
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.23896104
+    - serializedVersion: 3
+      time: 0.25
+      value: 0.25
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.5
+      value: 0.5
+      inSlope: 1.4445759
+      outSlope: 1.4445759
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.22857141
+    - serializedVersion: 3
+      time: 0.75
+      value: 0.75
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1.556604
+      outSlope: 1.556604
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.21818185
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _strideSpeedCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: -0.0012969971
+      value: -0.0047302246
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.20081674
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.090718865
+    - serializedVersion: 3
+      time: 0.92076415
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &991294562
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8176,15 +8268,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _rayLength: 2.2
-  _RideHeight: 2
+  _RideHeight: 2.05
   _RideSpringStrength: 33333
   _RideSpringDamper: 1000
   _ground:
     serializedVersion: 2
     m_Bits: 1
-  _torqueStrength: 1000
-  _torqueDamping: 100
-  _uprightRotation: {x: 0, y: 0, z: 0, w: 1}
   _MaxSpeed: 8
   _Acceleration: 200
   _AccelerationFactorFromDot:
@@ -8307,6 +8396,11 @@ MonoBehaviour:
   _slopeCircleGizmo: 0
   _jumpHeight: 2
   _fallMultiplier: 2.5
+  _accelScale: 2
+  _turnThreshold: 1
+  _torqueStrength: 1000
+  _torqueDamping: 100
+  _uprightRotation: {x: 0, y: 0, z: 0, w: 1}
   MovementEnable: 1
 --- !u!1 &1038687153
 GameObject:
@@ -8790,7 +8884,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh17930
+  m_Name: pb_Mesh17852
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -15853,7 +15947,7 @@ MonoBehaviour:
   waypoints:
   - {x: -30.622, y: 5.375, z: -40.29}
   - {x: 12.221503, y: 5.375, z: -40.29}
-  maxSpeed: 10
+  maxSpeed: 5
   Limit: 0.1
 --- !u!64 &1916006555
 MeshCollider:

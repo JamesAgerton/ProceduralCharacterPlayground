@@ -34,12 +34,12 @@ using ProceduralCharacter.Animation;
 namespace ProceduralCharacter.Movement
 {
     [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(SphereCollider))]
+    [SelectionBase]
     public class MovementController : MonoBehaviour
     {
         #region Variables(Private)
         private MovementInterpreter _input;
         private Rigidbody _RB;
-        //private SphereCollider _sphereCollider;
 
         [Header("Grounding")]
         Vector3 DownDir = Vector3.down;
@@ -53,12 +53,6 @@ namespace ProceduralCharacter.Movement
         float _RideSpringDamper = 10f;
         [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
         public LayerMask _ground;
-        [SerializeField]
-        float _torqueStrength = 1000f;
-        [SerializeField]
-        float _torqueDamping = 100f;
-        [SerializeField]
-        Quaternion _uprightRotation = Quaternion.identity;
 
         Vector3 _groundVel = Vector3.zero;
 
@@ -119,12 +113,30 @@ namespace ProceduralCharacter.Movement
 
         bool _isMoving = false;
         bool _isGrounded = false;
+
+        [Header("Acceleration Tilt")]
+        [SerializeField, Range(0,6), Tooltip("Scaled force relative to torque strength.")]
+        float _accelScale = 2f;
+
+        [Header("Rotation (Turning & Uprightness)")]
+        [SerializeField, Range(0, 10)]
+        float _turnThreshold = 1f;
+
+        [SerializeField]
+        float _torqueStrength = 1000f;
+        [SerializeField]
+        float _torqueDamping = 100f;
+        [SerializeField]
+        Quaternion _uprightRotation = Quaternion.identity;
+
+
         RaycastHit _rayHit;
 
         Vector3 _UnitGoal = Vector3.zero;
         #endregion
 
         #region Properties
+        [Space]
         public bool MovementEnable = true;
         public bool IsMoving => _isMoving;
         public RaycastHit GroundHitInfo => _rayHit;
@@ -138,8 +150,6 @@ namespace ProceduralCharacter.Movement
             _RB = GetComponent<Rigidbody>();
 
             _slopeYMax = Mathf.Sin(Mathf.Deg2Rad * _slopeLimit);
-
-            _uprightRotation = transform.rotation;
         }
 
         // Update is called once per frame
@@ -173,9 +183,11 @@ namespace ProceduralCharacter.Movement
 
             HandleGrounding();
             //Desired XZ plane speed
-            HandleMovement();
+            Vector3 accel = HandleMovement();
 
+            VelTurn();
             UpdateUprightForce();
+            AccelTilt(_RB.velocity * Time.fixedDeltaTime);
         }
 
         private void OnDrawGizmos()
@@ -269,6 +281,10 @@ namespace ProceduralCharacter.Movement
                     {
                         speed = _sprintFactor;
                     }
+                    else
+                    {
+                        speed = 1f;
+                    }
                 }
                 else
                 {
@@ -283,8 +299,9 @@ namespace ProceduralCharacter.Movement
             _speedFactor = Mathf.SmoothDamp(_speedFactor, speed, ref _speedRefVel, _speedFactorSmoothTime);
         }
 
-        private void HandleMovement()
+        private Vector3 HandleMovement()
         {
+            Vector3 neededAccel;
             //input ...
             _UnitGoal = HandleSlope(_input.MoveDirection);
             if (_UnitGoal.magnitude > 1f)
@@ -307,7 +324,7 @@ namespace ProceduralCharacter.Movement
                     accel * Time.fixedDeltaTime);
 
                 //Actual force...
-                Vector3 neededAccel = (_GoalVel - _RB.velocity) / Time.fixedDeltaTime;
+                neededAccel = (_GoalVel - _RB.velocity) / Time.fixedDeltaTime;
 
                 float maxAccel = _MaxAccelForce * _MaxAccelerationForceFactorFromDot.Evaluate(velDot);// * _maxAccelForceFactor;
 
@@ -317,11 +334,13 @@ namespace ProceduralCharacter.Movement
             }
             else
             {
-                Vector3 neededAccel = _UnitGoal * _MaxSpeed * _speedFactor;
+                neededAccel = _UnitGoal * _MaxSpeed * _speedFactor;
                 neededAccel = Vector3.ClampMagnitude(neededAccel, _MaxAccelForce);
 
                 _RB.AddForce(Vector3.Scale(neededAccel * _RB.mass, _ForceScale));
             }
+
+            return neededAccel;
         }
 
         private Vector3 HandleSlope(Vector3 input)
@@ -384,6 +403,42 @@ namespace ProceduralCharacter.Movement
             }
         }
 
+        void AccelTilt(Vector3 accel)
+        {
+            Vector3 tiltAxis = Vector3.Cross(Vector3.up, accel.normalized).normalized;
+
+            _RB.AddTorque(tiltAxis * accel.magnitude * _accelScale * _torqueStrength);
+        }
+
+        void VelTurn()
+        {
+            Vector3 dir = GetRelativeVelocity();
+
+            if (dir.magnitude > _turnThreshold)
+            {
+                _uprightRotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+            }
+        }
+
+        Vector3 GetRelativeVelocity()
+        {
+            Vector3 vel = new Vector3(_RB.velocity.x, 0f, _RB.velocity.z);
+            Vector3 otherVel = Vector3.zero;
+            if (GroundHitInfo.rigidbody != null)
+            {
+                otherVel = GroundHitInfo.rigidbody.GetPointVelocity(GroundHitInfo.point);
+                otherVel.y = 0f;
+            }
+            Vector3 dir = vel - otherVel;
+
+            if (dir.magnitude < _turnThreshold)
+            {
+                dir = Vector3.zero;
+            }
+
+            return dir;
+        }
+
         void UpdateUprightForce()
         {
             Quaternion current = transform.rotation;
@@ -397,9 +452,8 @@ namespace ProceduralCharacter.Movement
 
             float rotRadians = rotDegrees * Mathf.Deg2Rad;
 
-            _RB.AddTorque((rotAxis * (rotRadians * _torqueStrength)) - (_RB.angularVelocity * _torqueDamping));
+            _RB.AddTorque((rotAxis * rotRadians * _torqueStrength) - (_RB.angularVelocity * _torqueDamping));
         }
-
         Quaternion ShortestRotation(Quaternion a, Quaternion b)
         {
             if (Quaternion.Dot(a, b) < 0)
@@ -411,7 +465,6 @@ namespace ProceduralCharacter.Movement
                 return a * Quaternion.Inverse(b);
             }
         }
-
         Quaternion Multiply(Quaternion input, float scalar)
         {
             return new Quaternion(input.x * scalar, input.y * scalar, input.z * scalar, input.w * scalar);

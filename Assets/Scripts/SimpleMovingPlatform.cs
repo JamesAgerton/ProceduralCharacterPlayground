@@ -30,9 +30,9 @@ public class SimpleMovingPlatform : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        _rb.MovePosition(Vector3.SmoothDamp(transform.position, waypoints[count], ref velocity, Time.deltaTime, maxSpeed));
+        _rb.MovePosition(Vector3.SmoothDamp(transform.position, waypoints[count], ref velocity, Time.fixedDeltaTime, maxSpeed));
         if ((_rb.position - waypoints[count]).magnitude < Limit)
         {
             count++;

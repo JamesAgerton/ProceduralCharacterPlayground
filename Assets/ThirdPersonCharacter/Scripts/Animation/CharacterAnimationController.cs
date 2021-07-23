@@ -8,10 +8,29 @@ public class CharacterAnimationController : MonoBehaviour
     Rigidbody _RB;
     MovementController _MC;
 
-    [SerializeField]
-    float _accelScale = 800f;
+    //[Header("Acceleration Tilt")]
+    //[SerializeField]
+    //float _accelScale = 800f;
 
-    Vector3 _acceleration = Vector3.zero;
+    //Vector3 _acceleration = Vector3.zero;
+
+    //[Header("Rotation (Turning & Uprightness)")]
+    //[SerializeField]
+    //float _turnThreshold = 1f;
+
+    //[SerializeField]
+    //float _torqueStrength = 1000f;
+    //[SerializeField]
+    //float _torqueDamping = 100f;
+    //[SerializeField]
+    //Quaternion _uprightRotation = Quaternion.identity;
+
+    [Header("Stride Wheel")]
+    [SerializeField]
+    private AnimationCurve _strideWeightCurve;
+    [SerializeField]
+    private AnimationCurve _strideSpeedCurve;
+
     #endregion
 
     #region Properties (PUBLIC)
@@ -33,18 +52,16 @@ public class CharacterAnimationController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        _acceleration = _RB.velocity * Time.fixedDeltaTime;
+        
+    }
 
-        AccelTilt(_acceleration);
+    private void OnDrawGizmos()
+    {
+        
     }
     #endregion
 
     #region Methods
-    void AccelTilt(Vector3 accel)
-    {
-        Vector3 tiltAxis = Vector3.Cross(Vector3.up, _acceleration.normalized).normalized;
-
-        _RB.AddTorque(tiltAxis * _acceleration.magnitude * _accelScale);
-    }
+    
     #endregion
 }

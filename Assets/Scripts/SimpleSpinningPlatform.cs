@@ -21,9 +21,9 @@ public class SimpleSpinningPlatform : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        angle += _spinRate * Time.deltaTime;
+        angle += _spinRate * Time.fixedDeltaTime;
         Quaternion newRotation = Quaternion.Euler(0f, angle, 0f);
         _body.MoveRotation(newRotation);
     }
