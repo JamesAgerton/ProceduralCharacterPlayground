@@ -30,6 +30,25 @@ public class CharacterAnimationController : MonoBehaviour
     private AnimationCurve _strideWeightCurve;
     [SerializeField]
     private AnimationCurve _strideSpeedCurve;
+    [SerializeField]
+    public AnimationCurve _strideBounceCurve;
+    [SerializeField]
+    private float _bounceSmoothTime = 0.1f;
+    [SerializeField]
+    private float _bounceHeight = 0.1f;
+
+    [Header("Jump")]
+    [SerializeField]
+    private float _jumpTransitionTime = 0.15f;
+    [SerializeField]
+    private float _jumpCrouchEffector = 0.1f;
+
+
+    private Vector3 _currentBounceVelocity;
+
+    float _currJumpFraction = 0.5f;
+    float _jumpVelocity = 0f;
+    float _targetJumpFraction = 0f;
 
     #endregion
 
