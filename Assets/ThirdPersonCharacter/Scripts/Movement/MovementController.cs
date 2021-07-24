@@ -286,7 +286,7 @@ namespace ProceduralCharacter.Movement
                     }
                     else
                     {
-                        speed = 1f;
+                        speed = _walkFactor;
                     }
                 }
                 else
@@ -422,13 +422,15 @@ namespace ProceduralCharacter.Movement
                 _uprightRotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
             }
 
+            //Rotate based on rotation of the object under the player's feet
             if(_isGrounded && _rayHit.rigidbody != null)
             {
-                _uprightRotation = Quaternion.Euler(_groundAngVel) * _uprightRotation;
+                Vector3 angleVelY = new Vector3(0f, _groundAngVel.y, 0f);
+                _uprightRotation = Quaternion.Euler(angleVelY) * _uprightRotation;
             }
         }
 
-        Vector3 GetRelativeVelocity()
+        public Vector3 GetRelativeVelocity()
         {
             Vector3 vel = new Vector3(_RB.velocity.x, 0f, _RB.velocity.z);
             Vector3 otherVel = Vector3.zero;

@@ -9,6 +9,8 @@ public class SimpleSpinningPlatform : MonoBehaviour
     private BoxCollider _collider;
 
     [SerializeField]
+    private Vector3 _axisScale = Vector3.up;
+    [SerializeField]
     private float _spinRate = 1f;
 
     float angle = 0f;
@@ -24,7 +26,7 @@ public class SimpleSpinningPlatform : MonoBehaviour
     void FixedUpdate()
     {
         angle += _spinRate * Time.fixedDeltaTime;
-        Quaternion newRotation = Quaternion.Euler(0f, angle, 0f);
+        Quaternion newRotation = Quaternion.Euler(_axisScale * angle);
         _body.MoveRotation(newRotation);
     }
 
