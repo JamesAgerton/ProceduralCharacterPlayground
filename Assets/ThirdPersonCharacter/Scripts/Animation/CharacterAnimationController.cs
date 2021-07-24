@@ -30,6 +30,10 @@ namespace ProceduralCharacter.Animation
 
         [SerializeField]
         Animator _animator;
+        [SerializeField]
+        bool SlowTime = false;
+        [SerializeField]
+        float TimeScale = 0.1f;
 
         [Header("Stride Wheel")]
         [SerializeField]
@@ -92,7 +96,15 @@ namespace ProceduralCharacter.Animation
 
         private void Update()
         {
-
+            if (SlowTime)
+            {
+                Time.timeScale = TimeScale;
+            }
+            else
+            {
+                Time.timeScale = 1f;
+            }
+            HandlePose();
         }
 
         private void FixedUpdate()
@@ -162,8 +174,19 @@ namespace ProceduralCharacter.Animation
             _strideCircumference = 2f * Mathf.PI * _currentStrideRadius;
             float Distance = _MC.GetRelativeVelocity().magnitude * sign * (Time.fixedDeltaTime);
             float Angle = (Distance / _strideCircumference) * 360f;
-            _strideAngle = (_strideAngle + Angle) % 360f;
+            _strideAngle = (_strideAngle + Angle) % 180f;
             _strideFraction = _strideAngle / 360f;
+        }
+
+        private void HandlePose()
+        {
+            _animator.SetBool("IsMoving", _MC.IsMoving);
+            _animator.SetBool("IsGrounded", _MC.IsGrounded);
+
+            float frac = _strideWeightCurve.Evaluate(_strideFraction);
+            float spd = _strideSpeedCurve.Evaluate(_speedFraction);
+            _animator.SetFloat("StrideFraction", frac);
+            _animator.SetFloat("StrideSpeed", spd);
         }
         #endregion
     }

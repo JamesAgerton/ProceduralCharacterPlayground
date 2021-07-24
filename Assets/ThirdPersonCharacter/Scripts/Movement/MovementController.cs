@@ -141,6 +141,7 @@ namespace ProceduralCharacter.Movement
         [Space]
         public bool MovementEnable = true;
         public bool IsMoving => _isMoving;
+        public bool IsGrounded => _isGrounded;
         public RaycastHit GroundHitInfo => _rayHit;
         public float MaxSpeed => _MaxSpeed;
         #endregion
@@ -188,11 +189,12 @@ namespace ProceduralCharacter.Movement
             HandleGrounding();
             //Desired XZ plane speed
             Vector3 accel = HandleMovement();
+            //Debug.DrawLine(transform.position, transform.position + accel);
 
             VelTurn();
             UpdateUprightForce();
-            AccelTilt(_RB.velocity * Time.fixedDeltaTime);
-            //AccelTilt(accel);
+            //AccelTilt(_RB.velocity * Time.fixedDeltaTime);
+            AccelTilt(accel);
         }
 
         private void OnDrawGizmos()
@@ -320,6 +322,15 @@ namespace ProceduralCharacter.Movement
                 _UnitGoal.Normalize();
             }
 
+            if(_UnitGoal.magnitude > 0f)
+            {
+                _isMoving = true;
+            }
+            else
+            {
+                _isMoving = false;
+            }
+
             if (_isGrounded)
             {
                 //calculate new goal vel...
@@ -342,6 +353,8 @@ namespace ProceduralCharacter.Movement
                 neededAccel = Vector3.ClampMagnitude(neededAccel, maxAccel);
 
                 _RB.AddForce(Vector3.Scale(neededAccel * _RB.mass, _ForceScale));
+
+                
             }
             else
             {
@@ -416,9 +429,10 @@ namespace ProceduralCharacter.Movement
 
         void AccelTilt(Vector3 accel)
         {
+            accel.y = 0;
             Vector3 tiltAxis = Vector3.Cross(Vector3.up, accel.normalized).normalized;
 
-            _RB.AddTorque(tiltAxis * accel.magnitude * _accelScale * _torqueStrength);
+            _RB.AddTorque(tiltAxis * accel.magnitude * _accelScale * _RB.mass);
         }
 
         void VelTurn()
@@ -469,6 +483,8 @@ namespace ProceduralCharacter.Movement
             rotAxis.Normalize();
 
             float rotRadians = rotDegrees * Mathf.Deg2Rad;
+
+            rotAxis.y *= 2f;    //TODO: Turn this into a variable, I should be able to customize this
 
             _RB.AddTorque((rotAxis * rotRadians * _torqueStrength) - (_RB.angularVelocity * _torqueDamping));
         }
