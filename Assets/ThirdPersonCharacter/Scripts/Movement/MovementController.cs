@@ -29,7 +29,6 @@
  */
 
 using UnityEngine;
-using ProceduralCharacter.Animation;
 
 namespace ProceduralCharacter.Movement
 {
@@ -55,6 +54,7 @@ namespace ProceduralCharacter.Movement
         public LayerMask _ground;
 
         Vector3 _groundVel = Vector3.zero;
+        Vector3 _groundAngVel = Vector3.zero;
 
         [Header("Speed")]
         [SerializeField]
@@ -140,6 +140,7 @@ namespace ProceduralCharacter.Movement
         public bool MovementEnable = true;
         public bool IsMoving => _isMoving;
         public RaycastHit GroundHitInfo => _rayHit;
+        public float MaxSpeed => _MaxSpeed;
         #endregion
 
         #region UnityMethods
@@ -173,6 +174,7 @@ namespace ProceduralCharacter.Movement
             if(_isGrounded && _rayHit.rigidbody != null)
             {
                 _groundVel = _rayHit.rigidbody.GetPointVelocity(_rayHit.point);
+                _groundAngVel = _rayHit.rigidbody.angularVelocity;
             }
             else
             {
@@ -188,6 +190,7 @@ namespace ProceduralCharacter.Movement
             VelTurn();
             UpdateUprightForce();
             AccelTilt(_RB.velocity * Time.fixedDeltaTime);
+            //AccelTilt(accel);
         }
 
         private void OnDrawGizmos()
@@ -417,6 +420,11 @@ namespace ProceduralCharacter.Movement
             if (dir.magnitude > _turnThreshold)
             {
                 _uprightRotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+            }
+
+            if(_isGrounded && _rayHit.rigidbody != null)
+            {
+                _uprightRotation = Quaternion.Euler(_groundAngVel) * _uprightRotation;
             }
         }
 

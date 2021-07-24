@@ -8162,6 +8162,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52e00920c2d148d4588a858bc22dbe5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _animator: {fileID: 1314768802}
   _strideWeightCurve:
     serializedVersion: 2
     m_Curve:
@@ -8255,6 +8256,43 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  _strideBounceCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 2.9155986
+      outSlope: 2.9155986
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.078030005
+    - serializedVersion: 3
+      time: 0.5
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -5.4672384
+      outSlope: -5.4672384
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.041612267
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _bounceSmoothTime: 0.1
+  _bounceHeight: 0.1
+  _jumpTransitionTime: 0.15
+  _jumpCrouchEffector: 0.1
 --- !u!114 &991294562
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8396,7 +8434,7 @@ MonoBehaviour:
   _slopeCircleGizmo: 0
   _jumpHeight: 2
   _fallMultiplier: 2.5
-  _accelScale: 2
+  _accelScale: 0.04
   _turnThreshold: 1
   _torqueStrength: 1000
   _torqueDamping: 100
@@ -9492,6 +9530,11 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1276458566}
   m_Mesh: {fileID: 1103937068}
+--- !u!95 &1314768802 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 9e9c793c9c990f543861c9c6f7780320, type: 3}
+  m_PrefabInstance: {fileID: 3035992}
+  m_PrefabAsset: {fileID: 0}
 --- !u!43 &1365934852
 Mesh:
   m_ObjectHideFlags: 0
