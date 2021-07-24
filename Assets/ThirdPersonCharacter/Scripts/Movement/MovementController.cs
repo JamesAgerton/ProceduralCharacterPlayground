@@ -41,6 +41,8 @@ namespace ProceduralCharacter.Movement
         private Rigidbody _RB;
 
         [Header("Grounding")]
+        [SerializeField]
+        bool _groundRayGizmo = false;
         Vector3 DownDir = Vector3.down;
         [SerializeField]
         float _rayLength = 2f;
@@ -161,7 +163,7 @@ namespace ProceduralCharacter.Movement
 
         private void FixedUpdate()
         {
-            Ray ray = new Ray(_RB.position + Vector3.up, Vector3.down);
+            Ray ray = new Ray(_RB.position, Vector3.down);
             if (Physics.Raycast(ray, out _rayHit, _rayLength, _ground))
             {
                 _isGrounded = true;
@@ -198,8 +200,14 @@ namespace ProceduralCharacter.Movement
             //Draw IsGrounded Sphere
             if (_isGrounded)
             {
-                Gizmos.color = Color.green;
-                Gizmos.DrawWireSphere(_rayHit.point, 0.1f);
+                if (_groundRayGizmo)
+                {
+                    Gizmos.color = Color.green;
+                    Vector3 center = new Vector3(transform.position.x, transform.position.y  - (_rayLength / 2f), transform.position.z);
+                    Vector3 size = new Vector3(0.025f, _rayLength, 0.025f);
+                    Gizmos.DrawCube(center, size);
+                    Gizmos.DrawWireCube(_rayHit.point, Vector3.one * 0.05f);
+                }
 
                 if (_slopeCircleGizmo)
                 {
@@ -425,7 +433,7 @@ namespace ProceduralCharacter.Movement
             //Rotate based on rotation of the object under the player's feet
             if(_isGrounded && _rayHit.rigidbody != null)
             {
-                Vector3 angleVelY = new Vector3(0f, _groundAngVel.y, 0f);
+                Vector3 angleVelY = new Vector3(0f, _groundAngVel.y * 1.15f, 0f);
                 _uprightRotation = Quaternion.Euler(angleVelY) * _uprightRotation;
             }
         }

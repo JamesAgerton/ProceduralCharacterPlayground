@@ -153,7 +153,6 @@ namespace ProceduralCharacter.Animation
         private void CalculateStrideWheel()
         {
             //distance = speed * time;
-            Debug.Log(_MC.GetRelativeVelocity());
             float sign = Vector3.Cross(_MC.GetRelativeVelocity(), transform.right).normalized.y;
             float SpeedTarget = Mathf.Clamp(_MC.GetRelativeVelocity().magnitude, 0f, _MC.MaxSpeed);
 

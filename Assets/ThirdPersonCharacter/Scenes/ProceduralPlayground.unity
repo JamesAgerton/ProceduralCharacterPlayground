@@ -906,7 +906,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh17870
+  m_Name: pb_Mesh17892
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -8306,7 +8306,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 991294556}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.52, y: 5.93, z: -11.34}
+  m_LocalPosition: {x: 0.009, y: 6.29, z: -19.997}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 668508208}
@@ -8327,6 +8327,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _animator: {fileID: 1314768802}
+  _drawStrideWheel: 0
   _strideWeightCurve:
     serializedVersion: 2
     m_Curve:
@@ -8471,8 +8472,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5da2e71a98ccd7a4599cd34c09a1a971, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _rayLength: 2.2
-  _RideHeight: 2.05
+  _groundRayGizmo: 1
+  _rayLength: 1.5
+  _RideHeight: 1.05
   _RideSpringStrength: 33333
   _RideSpringDamper: 1000
   _ground:
