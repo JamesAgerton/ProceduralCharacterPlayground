@@ -7837,8 +7837,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 934610530}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 0.7, z: 1}
+  m_LocalPosition: {x: 0, y: 0.25, z: 0}
+  m_LocalScale: {x: 0.65, y: 0.505, z: 0.65}
   m_Children: []
   m_Father: {fileID: 991294560}
   m_RootOrder: 1
@@ -7912,7 +7912,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh17818
+  m_Name: pb_Mesh17820
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -8245,8 +8245,9 @@ GameObject:
   - component: {fileID: 991294560}
   - component: {fileID: 991294559}
   - component: {fileID: 991294562}
+  - component: {fileID: 991294563}
   - component: {fileID: 991294558}
-  - component: {fileID: 991294557}
+  - component: {fileID: 991294564}
   - component: {fileID: 991294561}
   m_Layer: 8
   m_Name: Dummy
@@ -8255,19 +8256,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!135 &991294557
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 991294556}
-  m_Material: {fileID: 13400000, guid: c2815a7ab32e42c4bb42f59caacb8ec1, type: 2}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!54 &991294558
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -8474,9 +8462,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5da2e71a98ccd7a4599cd34c09a1a971, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _groundRayGizmo: 0
-  _rayLength: 1.5
-  _RideHeight: 1.05
+  _groundRayGizmo: 1
+  _rideHeight: 1
+  _rayOvershoot: 0.5
   _RideSpringStrength: 33333
   _RideSpringDamper: 1000
   _ground:
@@ -8553,8 +8541,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   _ForceScale: {x: 1, y: 0, z: 1}
   _sprintFactor: 1
-  _walkFactor: 0.5
-  _crouchFactor: 0.2
+  _defaultFactor: 0.5
   _inAirFactor: 0.3
   _disabledFactor: 0.1
   _speedFactorSmoothTime: 0.01
@@ -8610,6 +8597,36 @@ MonoBehaviour:
   _torqueDamping: 200
   _uprightRotation: {x: 0, y: 0, z: 0, w: 1}
   MovementEnable: 1
+  RideHeightMultiplier: 1
+  DefaultSpeedMultiplier: 1
+--- !u!114 &991294563
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 991294556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a01085395e1031a4cb866b0581913536, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _crouchRideHeightMultiplier: 0.6
+  _crouchSpeedMultiplier: 0.5
+--- !u!136 &991294564
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 991294556}
+  m_Material: {fileID: 13400000, guid: c2815a7ab32e42c4bb42f59caacb8ec1, type: 2}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  m_Radius: 0.35
+  m_Height: 1.1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.25, z: 0}
 --- !u!1 &1038687153
 GameObject:
   m_ObjectHideFlags: 0
@@ -10770,7 +10787,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh17804
+  m_Name: pb_Mesh17806
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2

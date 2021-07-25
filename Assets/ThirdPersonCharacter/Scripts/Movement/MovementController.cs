@@ -32,7 +32,7 @@ using UnityEngine;
 
 namespace ProceduralCharacter.Movement
 {
-    [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(SphereCollider))]
+    [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter))]
     [SelectionBase]
     public class MovementController : MonoBehaviour
     {
@@ -44,11 +44,11 @@ namespace ProceduralCharacter.Movement
         [SerializeField]
         bool _groundRayGizmo = false;
         Vector3 DownDir = Vector3.down;
-        [SerializeField]
-        float _rayLength = 2f;
-        [SerializeField]
-        float _RideHeight = 1f;
-        [SerializeField]
+        [SerializeField, Tooltip("Height above the ground for the transform to float")]
+        float _rideHeight = 1f;
+        [SerializeField, Range(-1, 1), Tooltip("Downward ray overshoot, allows for downward pull as well as upward push.")]
+        float _rayOvershoot = 0.5f;
+        [SerializeField, Tooltip("Strength of the spring which holds up the character, stronger makes faster movement.")]
         float _RideSpringStrength = 10f;
         [SerializeField]
         float _RideSpringDamper = 10f;
@@ -59,30 +59,30 @@ namespace ProceduralCharacter.Movement
         Vector3 _groundAngVel = Vector3.zero;
 
         [Header("Speed")]
-        [SerializeField]
+        [SerializeField, Min(0)]
         float _MaxSpeed = 8f;
 
         [SerializeField]
         float _Acceleration = 200f;
-        [SerializeField]
+        [SerializeField, Tooltip("Multiplier relative to velocity, when changing directions gives a boost to keep time to full speed constant.")]
         AnimationCurve _AccelerationFactorFromDot;
         [SerializeField]
         float _MaxAccelForce = 150f;
-        [SerializeField]
+        [SerializeField, Tooltip("Multiplier relative to velocity, when changing directions, gives a boost to keep time to full speed constant.")]
         AnimationCurve _MaxAccelerationForceFactorFromDot;
-        [SerializeField]
+        [SerializeField, Tooltip("Prevents movement forces from applying additional upward or downward force. Leave as (1, 0, 1).")]
         Vector3 _ForceScale = Vector3.zero;
 
         [Space]
-        [SerializeField]
-        float _sprintFactor = 1.5f;
-        [SerializeField]
-        float _walkFactor = 0.5f;
-        [SerializeField]
-        float _crouchFactor = 0.4f;
-        [SerializeField]
+        [SerializeField, Min(0), Tooltip("Multiplier for sprinting speed, recommend 1, higher values will exceed MaxSpeed.")]
+        float _sprintFactor = 1f;
+        [SerializeField, Min(0), Tooltip("Multiplier for default speed, recommend < SprintFactor.")]
+        float _defaultFactor = 0.5f;
+        //[SerializeField]
+        //float _crouchFactor = 0.4f;
+        [SerializeField, Min(0), Tooltip("Multiplier for acceleration while in the air, keep low.")]
         float _inAirFactor = 0.2f;
-        [SerializeField]
+        [SerializeField, Min(0), Tooltip("Multiplier for when movement is not allowed, recommend 0.")]
         float _disabledFactor = 0.1f;
         [Space]
         [SerializeField]
@@ -93,9 +93,9 @@ namespace ProceduralCharacter.Movement
         Vector3 _GoalVel = Vector3.zero;
 
         [Header("Slope Check")]
-        [SerializeField]
+        [SerializeField, Range(-90f, 90f)]
         float _slopeLimit = 35f;
-        [SerializeField]
+        [SerializeField, Tooltip("Multiplier which effects speed on slopes, faster on downslope slower on upslope.")]
         AnimationCurve _slopeSpeed;
         float _slopeYMax = 0f;
 
@@ -103,9 +103,9 @@ namespace ProceduralCharacter.Movement
         bool _slopeCircleGizmo = false;
 
         [Header("Jump")]
-        [SerializeField]
+        [SerializeField, Min(0), Tooltip("Desired jump height.")]
         float _jumpHeight = 2f;
-        [SerializeField]
+        [SerializeField, Min(0), Tooltip("Mario style fall multiplier, releasing jump key adds this multiplier to fall faster.")]
         float _fallMultiplier = 2.5f;
 
         float _jumpVelocity = 0f;
@@ -144,6 +144,11 @@ namespace ProceduralCharacter.Movement
         public bool IsGrounded => _isGrounded;
         public RaycastHit GroundHitInfo => _rayHit;
         public float MaxSpeed => _MaxSpeed;
+        public float RideHeight => _rideHeight;
+        [HideInInspector]
+        public float RideHeightMultiplier = 1f;
+        [HideInInspector]
+        public float DefaultSpeedMultiplier = 1f;
         #endregion
 
         #region UnityMethods
@@ -165,7 +170,7 @@ namespace ProceduralCharacter.Movement
         private void FixedUpdate()
         {
             Ray ray = new Ray(_RB.position, Vector3.down);
-            if (Physics.Raycast(ray, out _rayHit, _rayLength, _ground))
+            if (Physics.Raycast(ray, out _rayHit, (_rideHeight * RideHeightMultiplier) + _rayOvershoot, _ground))
             {
                 _isGrounded = true;
             }
@@ -205,8 +210,8 @@ namespace ProceduralCharacter.Movement
                 if (_groundRayGizmo)
                 {
                     Gizmos.color = Color.green;
-                    Vector3 center = new Vector3(transform.position.x, transform.position.y  - (_rayLength / 2f), transform.position.z);
-                    Vector3 size = new Vector3(0.025f, _rayLength, 0.025f);
+                    Vector3 center = new Vector3(transform.position.x, transform.position.y  - (((_rideHeight * RideHeightMultiplier) + _rayOvershoot) / 2f), transform.position.z);
+                    Vector3 size = new Vector3(0.025f, (_rideHeight * RideHeightMultiplier) + _rayOvershoot, 0.025f);
                     Gizmos.DrawCube(center, size);
                     Gizmos.DrawWireCube(_rayHit.point, Vector3.one * 0.05f);
                 }
@@ -251,7 +256,7 @@ namespace ProceduralCharacter.Movement
 
                 float relVel = rayDirVel - otherDirVel;
 
-                float x = _rayHit.distance - _RideHeight;
+                float x = _rayHit.distance - (_rideHeight * RideHeightMultiplier);
 
                 float springForce = (x * _RideSpringStrength) - (relVel * _RideSpringDamper);
 
@@ -281,22 +286,27 @@ namespace ProceduralCharacter.Movement
 
         private void HandleSpeedFactor()
         {
-            float speed = _walkFactor;
+            float speed = _defaultFactor;
             if(MovementEnable)
             {
                 if (_isGrounded)
                 {
-                    if (_input.Crouch)
-                    {
-                        speed = _crouchFactor;
-                    }
-                    else if (_input.Sprint)
+                    //if (_input.Crouch)
+                    //{
+                    //    speed = _crouchFactor;
+                    //}
+                    //else 
+                    if (_input.Sprint)
                     {
                         speed = _sprintFactor;
+                        if(DefaultSpeedMultiplier != 1f)
+                        {
+                            speed = _defaultFactor * DefaultSpeedMultiplier;
+                        }
                     }
                     else
                     {
-                        speed = _walkFactor;
+                        speed = _defaultFactor * DefaultSpeedMultiplier;
                     }
                 }
                 else
@@ -432,7 +442,9 @@ namespace ProceduralCharacter.Movement
             accel.y = 0;
             Vector3 tiltAxis = Vector3.Cross(Vector3.up, accel.normalized).normalized;
 
-            _RB.AddTorque(tiltAxis * accel.magnitude * _accelScale * _RB.mass);
+            float ClampedAccel = Mathf.Clamp(accel.magnitude * _accelScale * _RB.mass, 0f, _MaxAccelForce);
+
+            _RB.AddTorque(tiltAxis * ClampedAccel);
         }
 
         void VelTurn()

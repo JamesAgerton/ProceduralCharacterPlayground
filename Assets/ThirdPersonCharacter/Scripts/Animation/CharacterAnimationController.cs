@@ -10,6 +10,7 @@ namespace ProceduralCharacter.Animation
         #region Variables (PRIVATE)
         Rigidbody _RB;
         MovementController _MC;
+        MovementCrouch _MCrouch;
 
         //[Header("Acceleration Tilt")]
         //[SerializeField]
@@ -91,6 +92,11 @@ namespace ProceduralCharacter.Animation
             {
                 Debug.LogError("Animator required for procedural character animation!", this);
                 return;
+            }
+
+            if(GetComponent<MovementCrouch>() != null)
+            {
+                _MCrouch = GetComponent<MovementCrouch>();
             }
         }
 
@@ -187,6 +193,17 @@ namespace ProceduralCharacter.Animation
             float spd = _strideSpeedCurve.Evaluate(_speedFraction);
             _animator.SetFloat("StrideFraction", frac);
             _animator.SetFloat("StrideSpeed", spd);
+
+            if(_MCrouch != null)
+            {
+                frac = (_MC.RideHeight - _MC.GroundHitInfo.distance) / _MC.RideHeight / (1f - _MCrouch.CrouchRideMultiplier);
+                Debug.Log(frac);
+            }
+            else
+            {
+                frac = (_MC.RideHeight - _MC.GroundHitInfo.distance) / _MC.RideHeight;
+            }
+            _animator.SetFloat("CrouchFraction", frac);
         }
         #endregion
     }
