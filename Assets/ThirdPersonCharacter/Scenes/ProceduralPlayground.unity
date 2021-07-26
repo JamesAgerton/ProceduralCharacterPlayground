@@ -8651,9 +8651,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a7e6b94dd2f6bc4d8c79448fa543f1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _accelScale: 2
+  _useVelocity: 1
+  _velocityForceScale: 2
   _useMovementControllerAcceleration: 1
-  _MCAccelScale: 0.1
+  _MCAccelForceScale: 0.1
   _maxAccelForce: 500
   _turnThreshold: 1
   _torqueStrength: 1000

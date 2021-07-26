@@ -18,12 +18,14 @@ namespace ProceduralCharacter.Movement
 
 
         [Header("Acceleration Tilt")]
+        [SerializeField]
+        bool _useVelocity = false;
         [SerializeField, Min(0), Tooltip("Scaled force relative to torque strength.")]
-        float _accelScale = 2f;
+        float _velocityForceScale = 2f;
         [SerializeField, Tooltip("Gives turning tilts")]
         bool _useMovementControllerAcceleration = false;
         [SerializeField, Tooltip("Use values <1 for best results")]
-        float _MCAccelScale = 0.1f;
+        float _MCAccelForceScale = 0.1f;
         [SerializeField]
         float _maxAccelForce = 150f;
 
@@ -65,9 +67,12 @@ namespace ProceduralCharacter.Movement
                 Vector3 acceleration = Vector3.zero;
                 if (_useMovementControllerAcceleration && _MC != null)
                 {
-                    acceleration += _MC.Acceleration * (_MCAccelScale / _accelScale);
+                    acceleration += _MC.Acceleration * (_MCAccelForceScale);
                 }
-                acceleration += _RB.velocity * Time.fixedDeltaTime;
+                if (_useVelocity)
+                {
+                    acceleration += _RB.velocity * Time.fixedDeltaTime * _velocityForceScale;
+                }
 
                 AccelTilt(acceleration);
             }
@@ -117,7 +122,7 @@ namespace ProceduralCharacter.Movement
             accel.y = 0;
             Vector3 tiltAxis = Vector3.Cross(Vector3.up, accel.normalized).normalized;
 
-            float ClampedAccel = Mathf.Clamp(accel.magnitude * _accelScale * _RB.mass, 0f, _maxAccelForce);
+            float ClampedAccel = Mathf.Clamp(accel.magnitude * _RB.mass, 0f, _maxAccelForce);
 
             _RB.AddTorque(tiltAxis * ClampedAccel);
         }
