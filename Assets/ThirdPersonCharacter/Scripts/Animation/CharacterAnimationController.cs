@@ -11,23 +11,8 @@ namespace ProceduralCharacter.Animation
         Rigidbody _RB;
         MovementController _MC;
         MovementCrouch _MCrouch;
-
-        //[Header("Acceleration Tilt")]
-        //[SerializeField]
-        //float _accelScale = 800f;
-
-        //Vector3 _acceleration = Vector3.zero;
-
-        //[Header("Rotation (Turning & Uprightness)")]
-        //[SerializeField]
-        //float _turnThreshold = 1f;
-
-        //[SerializeField]
-        //float _torqueStrength = 1000f;
-        //[SerializeField]
-        //float _torqueDamping = 100f;
-        //[SerializeField]
-        //Quaternion _uprightRotation = Quaternion.identity;
+        MovementFloatRide _MFR;
+        MovementRotationForces _MRF;
 
         [SerializeField]
         Animator _animator;
@@ -97,6 +82,16 @@ namespace ProceduralCharacter.Animation
             if(GetComponent<MovementCrouch>() != null)
             {
                 _MCrouch = GetComponent<MovementCrouch>();
+            }
+
+            if(GetComponent<MovementFloatRide>() != null)
+            {
+                _MFR = GetComponent<MovementFloatRide>();
+            }
+
+            if(GetComponent<MovementRotationForces>() != null)
+            {
+                _MRF = GetComponent<MovementRotationForces>();
             }
         }
 
@@ -171,14 +166,14 @@ namespace ProceduralCharacter.Animation
         private void CalculateStrideWheel()
         {
             //distance = speed * time;
-            float sign = Vector3.Cross(_MC.GetRelativeVelocity(), transform.right).normalized.y;
-            float SpeedTarget = Mathf.Clamp(_MC.GetRelativeVelocity().magnitude, 0f, _MC.MaxSpeed);
+            float sign = Vector3.Cross(_MRF.GetRelativeVelocity(), transform.right).normalized.y;
+            float SpeedTarget = Mathf.Clamp(_MRF.GetRelativeVelocity().magnitude, 0f, _MC.MaxSpeed);
 
             _speedFraction = Mathf.SmoothDamp(_speedFraction, SpeedTarget / _MC.MaxSpeed, ref _refSpeedFractionVel, 0.1f);
             _currentStrideRadius = Mathf.Lerp(_minStrideRadius, _maxStrideRadius, _speedFraction);
 
             _strideCircumference = 2f * Mathf.PI * _currentStrideRadius;
-            float Distance = _MC.GetRelativeVelocity().magnitude * sign * (Time.fixedDeltaTime);
+            float Distance = _MRF.GetRelativeVelocity().magnitude * sign * (Time.fixedDeltaTime);
             float Angle = (Distance / _strideCircumference) * 360f;
             _strideAngle = (_strideAngle + Angle) % 180f;
             _strideFraction = _strideAngle / 360f;
@@ -187,21 +182,30 @@ namespace ProceduralCharacter.Animation
         private void HandlePose()
         {
             _animator.SetBool("IsMoving", _MC.IsMoving);
-            _animator.SetBool("IsGrounded", _MC.IsGrounded);
+            if(_MFR != null)
+            {
+                _animator.SetBool("IsGrounded", _MFR.IsGrounded);
+            }
+            else
+            {
+                _animator.SetBool("IsGrounded", true);
+            }
 
+            //Walking Animations
             float frac = _strideWeightCurve.Evaluate(_strideFraction);
             float spd = _strideSpeedCurve.Evaluate(_speedFraction);
             _animator.SetFloat("StrideFraction", frac);
             _animator.SetFloat("StrideSpeed", spd);
 
-            if(_MCrouch != null)
+            //Crouching Animation
+            if(_MCrouch != null && _MFR != null)
             {
-                frac = (_MC.RideHeight - _MC.GroundHitInfo.distance) / _MC.RideHeight / (1f - _MCrouch.CrouchRideMultiplier);
-                Debug.Log(frac);
+                frac = (_MFR.RideHeight - _MFR.RayHitInfo.distance) / _MFR.RideHeight / (1f - _MCrouch.CrouchRideMultiplier);
+                //Debug.Log(frac);
             }
             else
             {
-                frac = (_MC.RideHeight - _MC.GroundHitInfo.distance) / _MC.RideHeight;
+                frac = (_MFR.RideHeight - _MFR.RayHitInfo.distance) / _MFR.RideHeight;
             }
             _animator.SetFloat("CrouchFraction", frac);
         }

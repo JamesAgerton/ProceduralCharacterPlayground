@@ -1,62 +1,19 @@
 ﻿/* MovementControllerP: James Agerton 2021
- * 
- * Description: 
- *      This script controls walking and jumping. It also manages the drag value in the rigidbody component so that
- *          while on the ground the character can step up over obsticles, but in the air the character flies with 0
- *          drag. The fall multiplier is applied whenever the character is not grounded and not pressing the jump button.
- *          This gives extra control over height and distance while the character is jumping.
- *      It takes some information from other components to ensure it works correctly. This script may be expanded 
- *          later to include things like rolling and wall running and edge hanging.
- * 
- * Dependencies: 
- *      ProceduralCharacter.Animation:  ProceduralMeasurements provides a bool to indicate the character is grounded.
- *      MovementInterpreter:            Provides the input values.
- *      Rigidbody:                      The physics component for the character.
- *               
- * Variables:   
- *      _defaultSpeed:          Default movement speed goal.
- *      _crouchSpeed:           Default crouch movement speed goal.
- *      _sprintSpeed:
- *      _disabledSpeed:
- *      
- *      _walkSpeedSmoothTime:   SmoothDamp time for smoothing the current speed.
- *      
- *      _slopeLimit:            (Set to negative value to disable)
- *              
- * Properties:
- *      Speed:                  Public access to the default walking speed.
- *      CrouchSpeed:            Public access to the default crouch speed.
+ *  Handles jumping and horizontal movement.
  */
 
 using UnityEngine;
 
 namespace ProceduralCharacter.Movement
 {
-    [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter))]
+    [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter), typeof(MovementFloatRide))]
     [SelectionBase]
     public class MovementController : MonoBehaviour
     {
         #region Variables(Private)
         private MovementInterpreter _input;
         private Rigidbody _RB;
-
-        [Header("Grounding")]
-        [SerializeField]
-        bool _groundRayGizmo = false;
-        Vector3 DownDir = Vector3.down;
-        [SerializeField, Tooltip("Height above the ground for the transform to float")]
-        float _rideHeight = 1f;
-        [SerializeField, Range(-1, 1), Tooltip("Downward ray overshoot, allows for downward pull as well as upward push.")]
-        float _rayOvershoot = 0.5f;
-        [SerializeField, Tooltip("Strength of the spring which holds up the character, stronger makes faster movement.")]
-        float _RideSpringStrength = 10f;
-        [SerializeField]
-        float _RideSpringDamper = 10f;
-        [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
-        public LayerMask _ground;
-
-        Vector3 _groundVel = Vector3.zero;
-        Vector3 _groundAngVel = Vector3.zero;
+        private MovementFloatRide _MFR;
 
         [Header("Speed")]
         [SerializeField, Min(0)]
@@ -78,8 +35,6 @@ namespace ProceduralCharacter.Movement
         float _sprintFactor = 1f;
         [SerializeField, Min(0), Tooltip("Multiplier for default speed, recommend < SprintFactor.")]
         float _defaultFactor = 0.5f;
-        //[SerializeField]
-        //float _crouchFactor = 0.4f;
         [SerializeField, Min(0), Tooltip("Multiplier for acceleration while in the air, keep low.")]
         float _inAirFactor = 0.2f;
         [SerializeField, Min(0), Tooltip("Multiplier for when movement is not allowed, recommend 0.")]
@@ -91,6 +46,7 @@ namespace ProceduralCharacter.Movement
         float _speedRefVel = 0f;
 
         Vector3 _GoalVel = Vector3.zero;
+        Vector3 _acceleration = Vector3.zero;
 
         [Header("Slope Check")]
         [SerializeField, Range(-90f, 90f)]
@@ -110,29 +66,7 @@ namespace ProceduralCharacter.Movement
 
         float _jumpVelocity = 0f;
 
-        bool _disableGrounding = false;     //Turns off the grounding/float forces to allow the character to jump
-        bool _disableGroundingLock = false; //Makes it so that _disableGrounding must remain off until the Jump input is released
-
         bool _isMoving = false;
-        bool _isGrounded = false;
-
-        [Header("Acceleration Tilt")]
-        [SerializeField, Range(0,6), Tooltip("Scaled force relative to torque strength.")]
-        float _accelScale = 2f;
-
-        [Header("Rotation (Turning & Uprightness)")]
-        [SerializeField, Range(0, 10)]
-        float _turnThreshold = 1f;
-
-        [SerializeField]
-        float _torqueStrength = 1000f;
-        [SerializeField]
-        float _torqueDamping = 100f;
-        [SerializeField]
-        Quaternion _uprightRotation = Quaternion.identity;
-
-
-        RaycastHit _rayHit;
 
         Vector3 _UnitGoal = Vector3.zero;
         #endregion
@@ -141,14 +75,12 @@ namespace ProceduralCharacter.Movement
         [Space]
         public bool MovementEnable = true;
         public bool IsMoving => _isMoving;
-        public bool IsGrounded => _isGrounded;
-        public RaycastHit GroundHitInfo => _rayHit;
         public float MaxSpeed => _MaxSpeed;
-        public float RideHeight => _rideHeight;
         [HideInInspector]
         public float RideHeightMultiplier = 1f;
         [HideInInspector]
         public float DefaultSpeedMultiplier = 1f;
+        public Vector3 Acceleration => _acceleration;
         #endregion
 
         #region UnityMethods
@@ -157,6 +89,7 @@ namespace ProceduralCharacter.Movement
         {
             _input = GetComponent<MovementInterpreter>();
             _RB = GetComponent<Rigidbody>();
+            _MFR = GetComponent<MovementFloatRide>();
 
             _slopeYMax = Mathf.Sin(Mathf.Deg2Rad * _slopeLimit);
         }
@@ -169,54 +102,17 @@ namespace ProceduralCharacter.Movement
 
         private void FixedUpdate()
         {
-            Ray ray = new Ray(_RB.position, Vector3.down);
-            if (Physics.Raycast(ray, out _rayHit, (_rideHeight * RideHeightMultiplier) + _rayOvershoot, _ground))
-            {
-                _isGrounded = true;
-            }
-            else
-            {
-                _isGrounded = false;
-            }
-
-            if(_isGrounded && _rayHit.rigidbody != null)
-            {
-                _groundVel = _rayHit.rigidbody.GetPointVelocity(_rayHit.point);
-                _groundAngVel = _rayHit.rigidbody.angularVelocity;
-            }
-            else
-            {
-                _groundVel = Vector3.zero;
-            }
-
             HandleJump();
 
-            HandleGrounding();
-            //Desired XZ plane speed
-            Vector3 accel = HandleMovement();
-            //Debug.DrawLine(transform.position, transform.position + accel);
-
-            VelTurn();
-            UpdateUprightForce();
-            //AccelTilt(_RB.velocity * Time.fixedDeltaTime);
-            AccelTilt(accel);
+            _acceleration = HandleMovement();
         }
 
         private void OnDrawGizmos()
         {
-            //Draw IsGrounded Sphere
-            if (_isGrounded)
+            if (Application.isPlaying)
             {
-                if (_groundRayGizmo)
-                {
-                    Gizmos.color = Color.green;
-                    Vector3 center = new Vector3(transform.position.x, transform.position.y  - (((_rideHeight * RideHeightMultiplier) + _rayOvershoot) / 2f), transform.position.z);
-                    Vector3 size = new Vector3(0.025f, (_rideHeight * RideHeightMultiplier) + _rayOvershoot, 0.025f);
-                    Gizmos.DrawCube(center, size);
-                    Gizmos.DrawWireCube(_rayHit.point, Vector3.one * 0.05f);
-                }
-
-                if (_slopeCircleGizmo)
+                //Draw IsGrounded Sphere
+                if (_MFR.IsGrounded && _slopeCircleGizmo)
                 {
                     int x = 36;
                     for (int i = 0; i < x; i++)
@@ -237,65 +133,60 @@ namespace ProceduralCharacter.Movement
         #endregion
 
         #region Methods
-        private void HandleGrounding()
-        {
-            if (_isGrounded && !_disableGrounding)
-            {
-                Vector3 vel = _RB.velocity;
-                Vector3 rayDir = transform.TransformDirection(DownDir);
+        //private void HandleGrounding()
+        //{
+        //    if (_isGrounded && !_disableGrounding)
+        //    {
+        //        Vector3 vel = _RB.velocity;
+        //        Vector3 rayDir = transform.TransformDirection(DownDir);
 
-                Vector3 otherVel = Vector3.zero;
-                Rigidbody hitBody = _rayHit.rigidbody;
-                if (hitBody != null)
-                {
-                    otherVel = hitBody.velocity;
-                }
+        //        Vector3 otherVel = Vector3.zero;
+        //        Rigidbody hitBody = _rayHit.rigidbody;
+        //        if (hitBody != null)
+        //        {
+        //            otherVel = hitBody.velocity;
+        //        }
 
-                float rayDirVel = Vector3.Dot(rayDir, vel);
-                float otherDirVel = Vector3.Dot(rayDir, otherVel);
+        //        float rayDirVel = Vector3.Dot(rayDir, vel);
+        //        float otherDirVel = Vector3.Dot(rayDir, otherVel);
 
-                float relVel = rayDirVel - otherDirVel;
+        //        float relVel = rayDirVel - otherDirVel;
 
-                float x = _rayHit.distance - (_rideHeight * RideHeightMultiplier);
+        //        float x = _rayHit.distance - (_rideHeight * RideHeightMultiplier);
 
-                float springForce = (x * _RideSpringStrength) - (relVel * _RideSpringDamper);
+        //        float springForce = (x * _RideSpringStrength) - (relVel * _RideSpringDamper);
 
-                //Debug.DrawLine(transform.position, transform.position + (rayDir * springForce), Color.yellow);
+        //        //Debug.DrawLine(transform.position, transform.position + (rayDir * springForce), Color.yellow);
 
-                _RB.AddForce(rayDir * springForce);
+        //        _RB.AddForce(rayDir * springForce);
 
-                if (hitBody != null)
-                {
-                    hitBody.AddForceAtPosition(rayDir * -springForce, _rayHit.point);
-                }
-            }
-            else
-            {
-                if (_RB.velocity.y < 0)
-                {
-                    //Character is falling (probably)
-                    _RB.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.fixedDeltaTime;
-                }
-                else if (_RB.velocity.y > 0 && !_input.Jump)
-                {
-                    //use higher multiplier to halt upward momentum
-                    _RB.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.fixedDeltaTime;
-                }
-            }
-        }
+        //        if (hitBody != null)
+        //        {
+        //            hitBody.AddForceAtPosition(rayDir * -springForce, _rayHit.point);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        if (_RB.velocity.y < 0)
+        //        {
+        //            //Character is falling (probably)
+        //            _RB.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.fixedDeltaTime;
+        //        }
+        //        else if (_RB.velocity.y > 0 && !_input.Jump)
+        //        {
+        //            //use higher multiplier to halt upward momentum
+        //            _RB.velocity += Vector3.up * Physics.gravity.y * (_fallMultiplier - 1) * Time.fixedDeltaTime;
+        //        }
+        //    }
+        //}
 
         private void HandleSpeedFactor()
         {
             float speed = _defaultFactor;
             if(MovementEnable)
             {
-                if (_isGrounded)
+                if (_MFR.IsGrounded)
                 {
-                    //if (_input.Crouch)
-                    //{
-                    //    speed = _crouchFactor;
-                    //}
-                    //else 
                     if (_input.Sprint)
                     {
                         speed = _sprintFactor;
@@ -341,7 +232,7 @@ namespace ProceduralCharacter.Movement
                 _isMoving = false;
             }
 
-            if (_isGrounded)
+            if (_MFR.IsGrounded)
             {
                 //calculate new goal vel...
                 Vector3 unitVel = _GoalVel.normalized;
@@ -352,7 +243,13 @@ namespace ProceduralCharacter.Movement
 
                 Vector3 goalVel = _UnitGoal * _MaxSpeed * _speedFactor;
 
-                _GoalVel = Vector3.MoveTowards(_GoalVel, (goalVel) + (_groundVel),
+                Vector3 groundVel = Vector3.zero;
+                if (_MFR.RayHitInfo.rigidbody != null)
+                {
+                    groundVel = _MFR.RayHitInfo.rigidbody.GetPointVelocity(_MFR.RayHitInfo.point);
+                }
+
+                _GoalVel = Vector3.MoveTowards(_GoalVel, (goalVel) + groundVel,
                     accel * Time.fixedDeltaTime);
 
                 //Actual force...
@@ -363,8 +260,6 @@ namespace ProceduralCharacter.Movement
                 neededAccel = Vector3.ClampMagnitude(neededAccel, maxAccel);
 
                 _RB.AddForce(Vector3.Scale(neededAccel * _RB.mass, _ForceScale));
-
-                
             }
             else
             {
@@ -380,10 +275,10 @@ namespace ProceduralCharacter.Movement
         private Vector3 HandleSlope(Vector3 input)
         {
             Vector3 output = input;
-            if (_isGrounded && _slopeLimit > 0f)
+            if (_MFR.IsGrounded && _slopeLimit > 0f)
             {
-                output = Vector3.ProjectOnPlane(input, _rayHit.normal);
-                float ya = _slopeSpeed.Evaluate(Mathf.Sin(Mathf.Deg2Rad * Vector3.Angle(Vector3.up, _rayHit.normal)) / _slopeYMax);
+                output = Vector3.ProjectOnPlane(input, _MFR.RayHitInfo.normal);
+                float ya = _slopeSpeed.Evaluate(Mathf.Sin(Mathf.Deg2Rad * Vector3.Angle(Vector3.up, _MFR.RayHitInfo.normal)) / _slopeYMax);
                 float yA = output.normalized.y;
 
                 float X = (yA == 0 || ya == 0) ? 0 : ya / yA;
@@ -405,116 +300,115 @@ namespace ProceduralCharacter.Movement
 
             if (_input.Jump)
             {
-                if (_isGrounded)
+                if (_MFR.IsGrounded)
                 {
-                    if (!_disableGroundingLock)
+                    if (!_MFR.FloatEnableLock)     //!_disableGroundingLock
                     {
-                        _disableGrounding = true;
+                        _MFR.FloatEnable = false;   //_disableGrounding = true;
                         Vector3 jumpForce = (new Vector3(0f, _jumpVelocity, 0f) / Time.fixedDeltaTime) * _RB.mass;
-                        _disableGrounding = true;
-                        _disableGroundingLock = true;
-                        //MovementEnable = !_isJumping;
+                        //_MFR.FloatEnable = false;   //_disableGrounding = true;
+                        _MFR.FloatEnableLock = true;    //_disableGroundingLock = true;
 
                         //_RB.velocity += (jumpForce);
                         _RB.AddForce(jumpForce);
 
-                        Rigidbody otherRB = _rayHit.rigidbody;
+                        Rigidbody otherRB = _MFR.RayHitInfo.rigidbody;
                         if (otherRB != null)
                         {
-                            otherRB.AddForceAtPosition(-jumpForce, _rayHit.point);
+                            otherRB.AddForceAtPosition(-jumpForce, _MFR.RayHitInfo.point);
                         }
                     }
                 }
                 else
                 {
-                    _disableGrounding = false;
+                    _MFR.FloatEnable = true;      //_disableGrounding = false;
                 }
             }
             else
             {
-                _disableGrounding = false;
-                _disableGroundingLock = false;
+                _MFR.FloatEnable = true;            //_disableGrounding = false;
+                _MFR.FloatEnableLock = false;            //_disableGroundingLock = false;
             }
         }
 
-        void AccelTilt(Vector3 accel)
-        {
-            accel.y = 0;
-            Vector3 tiltAxis = Vector3.Cross(Vector3.up, accel.normalized).normalized;
+        //void AccelTilt(Vector3 accel)
+        //{
+        //    accel.y = 0;
+        //    Vector3 tiltAxis = Vector3.Cross(Vector3.up, accel.normalized).normalized;
 
-            float ClampedAccel = Mathf.Clamp(accel.magnitude * _accelScale * _RB.mass, 0f, _MaxAccelForce);
+        //    float ClampedAccel = Mathf.Clamp(accel.magnitude * _accelScale * _RB.mass, 0f, _MaxAccelForce);
 
-            _RB.AddTorque(tiltAxis * ClampedAccel);
-        }
+        //    _RB.AddTorque(tiltAxis * ClampedAccel);
+        //}
 
-        void VelTurn()
-        {
-            Vector3 dir = GetRelativeVelocity();
+        //void VelTurn()
+        //{
+        //    Vector3 dir = GetRelativeVelocity();
 
-            if (dir.magnitude > _turnThreshold)
-            {
-                _uprightRotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
-            }
+        //    if (dir.magnitude > _turnThreshold)
+        //    {
+        //        _uprightRotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+        //    }
 
-            //Rotate based on rotation of the object under the player's feet
-            if(_isGrounded && _rayHit.rigidbody != null)
-            {
-                Vector3 angleVelY = new Vector3(0f, _groundAngVel.y * 1.15f, 0f);
-                _uprightRotation = Quaternion.Euler(angleVelY) * _uprightRotation;
-            }
-        }
+        //    //Rotate based on rotation of the object under the player's feet
+        //    if(_isGrounded && _rayHit.rigidbody != null)
+        //    {
+        //        Vector3 angleVelY = new Vector3(0f, _groundAngVel.y * 1.15f, 0f);
+        //        _uprightRotation = Quaternion.Euler(angleVelY) * _uprightRotation;
+        //    }
+        //}
 
-        public Vector3 GetRelativeVelocity()
-        {
-            Vector3 vel = new Vector3(_RB.velocity.x, 0f, _RB.velocity.z);
-            Vector3 otherVel = Vector3.zero;
-            if (GroundHitInfo.rigidbody != null)
-            {
-                otherVel = GroundHitInfo.rigidbody.GetPointVelocity(GroundHitInfo.point);
-                otherVel.y = 0f;
-            }
-            Vector3 dir = vel - otherVel;
+        //public Vector3 GetRelativeVelocity()
+        //{
+        //    Vector3 vel = new Vector3(_RB.velocity.x, 0f, _RB.velocity.z);
+        //    Vector3 otherVel = Vector3.zero;
+        //    if (GroundHitInfo.rigidbody != null)
+        //    {
+        //        otherVel = GroundHitInfo.rigidbody.GetPointVelocity(GroundHitInfo.point);
+        //        otherVel.y = 0f;
+        //    }
+        //    Vector3 dir = vel - otherVel;
 
-            if (dir.magnitude < _turnThreshold)
-            {
-                dir = Vector3.zero;
-            }
+        //    if (dir.magnitude < _turnThreshold)
+        //    {
+        //        dir = Vector3.zero;
+        //    }
 
-            return dir;
-        }
+        //    return dir;
+        //}
 
-        void UpdateUprightForce()
-        {
-            Quaternion current = transform.rotation;
-            Quaternion toGoal = ShortestRotation(_uprightRotation, current);
+        //void UpdateUprightForce()
+        //{
+        //    Quaternion current = transform.rotation;
+        //    Quaternion toGoal = ShortestRotation(_uprightRotation, current);
 
-            Vector3 rotAxis;
-            float rotDegrees;
+        //    Vector3 rotAxis;
+        //    float rotDegrees;
 
-            toGoal.ToAngleAxis(out rotDegrees, out rotAxis);
-            rotAxis.Normalize();
+        //    toGoal.ToAngleAxis(out rotDegrees, out rotAxis);
+        //    rotAxis.Normalize();
 
-            float rotRadians = rotDegrees * Mathf.Deg2Rad;
+        //    float rotRadians = rotDegrees * Mathf.Deg2Rad;
 
-            rotAxis.y *= 2f;    //TODO: Turn this into a variable, I should be able to customize this
+        //    rotAxis.y *= 2f;    //TODO: Turn this into a variable, I should be able to customize this
 
-            _RB.AddTorque((rotAxis * rotRadians * _torqueStrength) - (_RB.angularVelocity * _torqueDamping));
-        }
-        Quaternion ShortestRotation(Quaternion a, Quaternion b)
-        {
-            if (Quaternion.Dot(a, b) < 0)
-            {
-                return a * Quaternion.Inverse(Multiply(b, -1));
-            }
-            else
-            {
-                return a * Quaternion.Inverse(b);
-            }
-        }
-        Quaternion Multiply(Quaternion input, float scalar)
-        {
-            return new Quaternion(input.x * scalar, input.y * scalar, input.z * scalar, input.w * scalar);
-        }
+        //    _RB.AddTorque((rotAxis * rotRadians * _torqueStrength) - (_RB.angularVelocity * _torqueDamping));
+        //}
+        //Quaternion ShortestRotation(Quaternion a, Quaternion b)
+        //{
+        //    if (Quaternion.Dot(a, b) < 0)
+        //    {
+        //        return a * Quaternion.Inverse(Multiply(b, -1));
+        //    }
+        //    else
+        //    {
+        //        return a * Quaternion.Inverse(b);
+        //    }
+        //}
+        //Quaternion Multiply(Quaternion input, float scalar)
+        //{
+        //    return new Quaternion(input.x * scalar, input.y * scalar, input.z * scalar, input.w * scalar);
+        //}
         #endregion
     }
 }

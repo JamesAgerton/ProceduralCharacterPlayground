@@ -8244,8 +8244,10 @@ GameObject:
   m_Component:
   - component: {fileID: 991294560}
   - component: {fileID: 991294559}
+  - component: {fileID: 991294557}
   - component: {fileID: 991294562}
   - component: {fileID: 991294563}
+  - component: {fileID: 991294565}
   - component: {fileID: 991294558}
   - component: {fileID: 991294564}
   - component: {fileID: 991294561}
@@ -8256,6 +8258,29 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &991294557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 991294556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa81de553ffcea54b8d4f58271566904, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _groundRayGizmo: 0
+  _rideHeight: 1
+  _rayOvershoot: 0.5
+  _RideSpringStrength: 33333
+  _RideSpringDamper: 900
+  _ground:
+    serializedVersion: 2
+    m_Bits: 1
+  FloatEnable: 1
+  FloatEnableLock: 0
+  RideHeightMultiplier: 1
 --- !u!54 &991294558
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -8294,7 +8319,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 991294556}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.009, y: 6.29, z: -19.997}
+  m_LocalPosition: {x: 0.89, y: 6.66, z: -20.72}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 668508208}
@@ -8462,14 +8487,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5da2e71a98ccd7a4599cd34c09a1a971, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _groundRayGizmo: 1
-  _rideHeight: 1
-  _rayOvershoot: 0.5
-  _RideSpringStrength: 33333
-  _RideSpringDamper: 1000
-  _ground:
-    serializedVersion: 2
-    m_Bits: 1
   _MaxSpeed: 12
   _Acceleration: 200
   _AccelerationFactorFromDot:
@@ -8591,11 +8608,6 @@ MonoBehaviour:
   _slopeCircleGizmo: 0
   _jumpHeight: 2
   _fallMultiplier: 2.5
-  _accelScale: 0.15
-  _turnThreshold: 1
-  _torqueStrength: 1000
-  _torqueDamping: 200
-  _uprightRotation: {x: 0, y: 0, z: 0, w: 1}
   MovementEnable: 1
   RideHeightMultiplier: 1
   DefaultSpeedMultiplier: 1
@@ -8627,6 +8639,28 @@ CapsuleCollider:
   m_Height: 1.1
   m_Direction: 1
   m_Center: {x: 0, y: 0.25, z: 0}
+--- !u!114 &991294565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 991294556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a7e6b94dd2f6bc4d8c79448fa543f1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _accelScale: 2
+  _useMovementControllerAcceleration: 1
+  _MCAccelScale: 0.1
+  _maxAccelForce: 500
+  _turnThreshold: 1
+  _torqueStrength: 1000
+  _torqueDamping: 100
+  _yawForceMultiplier: 2
+  _uprightRotation: {x: 0, y: 0, z: 0, w: 1}
+  RotationEnable: 1
 --- !u!1 &1038687153
 GameObject:
   m_ObjectHideFlags: 0

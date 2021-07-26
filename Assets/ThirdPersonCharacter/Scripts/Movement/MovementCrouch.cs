@@ -4,11 +4,12 @@ using UnityEngine;
 
 namespace ProceduralCharacter.Movement
 {
-    [RequireComponent(typeof(MovementController), typeof(MovementInterpreter))]
+    [RequireComponent(typeof(MovementController), typeof(MovementInterpreter), typeof(MovementFloatRide))]
     public class MovementCrouch : MonoBehaviour
     {
         #region Variables (PRIVATE)
         MovementController _MC;
+        MovementFloatRide _MFR;
         MovementInterpreter _Input;
 
         [SerializeField, Min(0)]
@@ -27,6 +28,7 @@ namespace ProceduralCharacter.Movement
         private void Start()
         {
             _MC = GetComponent<MovementController>();
+            _MFR = GetComponent<MovementFloatRide>();
             _Input = GetComponent<MovementInterpreter>();
         }
 
@@ -34,12 +36,12 @@ namespace ProceduralCharacter.Movement
         {
             if (_Input.Crouch)
             {
-                _MC.RideHeightMultiplier = _crouchRideHeightMultiplier;
+                _MFR.RideHeightMultiplier = _crouchRideHeightMultiplier;
                 _MC.DefaultSpeedMultiplier = _crouchSpeedMultiplier;
             }
             else
             {
-                _MC.RideHeightMultiplier = 1f;
+                _MFR.RideHeightMultiplier = 1f;
                 _MC.DefaultSpeedMultiplier = 1f;
             }
         }
