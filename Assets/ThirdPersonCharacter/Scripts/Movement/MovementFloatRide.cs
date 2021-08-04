@@ -1,29 +1,27 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ProceduralCharacter.Movement
 {
+    /// <summary>
+    /// Use physics and raycast to apply an upward force
+    /// </summary>
     [RequireComponent(typeof(Rigidbody), typeof(MovementInterpreter))]
     public class MovementFloatRide : MonoBehaviour
     {
-        /// <summary>
-        /// Physically float the character above the ground.
-        /// </summary>
-        /// 
         #region Variables (PRIVATE)
         private Rigidbody _RB;
 
         [Header("Grounding")]
         [SerializeField]
         bool _groundRayGizmo = false;
-        Vector3 DownDir = Vector3.down;
+        [SerializeField, Tooltip("Direction to aim raycast.")]
+        Vector3 _downDir = Vector3.down;
         [SerializeField, Tooltip("Height above the ground for the transform to float")]
         float _rideHeight = 1f;
         [SerializeField, Range(-1, 1), Tooltip("Downward ray overshoot, allows for downward pull as well as upward push.")]
         float _rayOvershoot = 0.5f;
-        [SerializeField, Tooltip("Strength of the spring which holds up the character, stronger makes faster movement.")]
-        float _RideSpringStrength = 10f;
+        [SerializeField, Tooltip("Strength of the spring which holds up the character, stronger makes faster movement. Relative to rigidbody mass.")]
+        float _RideSpringStrength = 100f;
         [SerializeField]
         float _RideSpringDamper = 10f;
         [SerializeField, Tooltip("Layermask indicating the ground, used to check if the character is grounded.")]
@@ -41,6 +39,7 @@ namespace ProceduralCharacter.Movement
         public bool IsGrounded => _isGrounded;
         public RaycastHit RayHitInfo => _rayHitInfo;
         public float RideHeight => _rideHeight;
+        [Tooltip("Modifier used by other scripts to adjust the height of the ride.")]
         public float RideHeightMultiplier = 1f;
         #endregion
 
@@ -49,6 +48,12 @@ namespace ProceduralCharacter.Movement
         private void Start()
         {
             _RB = GetComponent<Rigidbody>();
+        }
+
+        private void Update()
+        {
+            //Reset Ride Height modifier
+            RideHeightMultiplier = 1f;
         }
 
         private void FixedUpdate()
@@ -93,7 +98,7 @@ namespace ProceduralCharacter.Movement
             if (_isGrounded && FloatEnable)
             {
                 Vector3 vel = _RB.velocity;
-                Vector3 rayDir = transform.TransformDirection(DownDir);
+                Vector3 rayDir = _downDir;
 
                 Vector3 otherVel = Vector3.zero;
                 Rigidbody hitBody = _rayHitInfo.rigidbody;
@@ -108,6 +113,7 @@ namespace ProceduralCharacter.Movement
                 float relVel = rayDirVel - otherDirVel;
 
                 float x = _rayHitInfo.distance - (_rideHeight * RideHeightMultiplier);
+
 
                 float springForce = (x * _RideSpringStrength) - (relVel * _RideSpringDamper);
 

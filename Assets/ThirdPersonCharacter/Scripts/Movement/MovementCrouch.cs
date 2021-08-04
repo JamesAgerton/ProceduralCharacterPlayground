@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ProceduralCharacter.Movement
 {
@@ -38,11 +36,6 @@ namespace ProceduralCharacter.Movement
             {
                 _MFR.RideHeightMultiplier = _crouchRideHeightMultiplier;
                 _MC.DefaultSpeedMultiplier = _crouchSpeedMultiplier;
-            }
-            else
-            {
-                _MFR.RideHeightMultiplier = 1f;
-                _MC.DefaultSpeedMultiplier = 1f;
             }
         }
         #endregion

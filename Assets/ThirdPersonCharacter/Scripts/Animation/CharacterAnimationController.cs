@@ -208,6 +208,11 @@ namespace ProceduralCharacter.Animation
                 frac = (_MFR.RideHeight - _MFR.RayHitInfo.distance) / _MFR.RideHeight;
             }
             _animator.SetFloat("CrouchFraction", frac);
+
+            //Jumping/Air Keyframes
+            float clampedYVel = Mathf.Clamp(_RB.velocity.y, -1f, 1f);
+            float YFraction = (-clampedYVel + 1) / 2f;
+            _animator.SetFloat("JumpFraction", YFraction);
         }
         #endregion
     }

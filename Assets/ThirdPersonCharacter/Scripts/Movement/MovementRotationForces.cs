@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ProceduralCharacter.Movement
 {
@@ -37,8 +35,6 @@ namespace ProceduralCharacter.Movement
         float _torqueStrength = 1000f;
         [SerializeField]
         float _torqueDamping = 100f;
-        [SerializeField]
-        float _yawForceMultiplier = 2f;
         [SerializeField]
         Quaternion _uprightRotation = Quaternion.identity;
         #endregion
@@ -82,6 +78,7 @@ namespace ProceduralCharacter.Movement
         #region Methods
         void VelTurn()
         {
+            //TODO: this has to be faster, the turn is too slow when turning 180.
             Vector3 dir = GetRelativeVelocity();
 
             if (dir.magnitude > _turnThreshold)
@@ -139,8 +136,6 @@ namespace ProceduralCharacter.Movement
             rotAxis.Normalize();
 
             float rotRadians = rotDegrees * Mathf.Deg2Rad;
-
-            rotAxis.y *= _yawForceMultiplier;           //Extra multiplier for snappier turning around the y axis
 
             _RB.AddTorque((rotAxis * rotRadians * _torqueStrength) - (_RB.angularVelocity * _torqueDamping));
         }

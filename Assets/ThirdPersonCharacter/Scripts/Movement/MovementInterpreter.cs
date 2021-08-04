@@ -1,44 +1,23 @@
-﻿/* Movement Interpreter: James Agerton 2020
- * 
- * Description: 
- *      Movement Interpreter takes in raw input values and transforms them into worldspace values for other
- *          scripts to use.
- * 
- * Dependencies: 
- *      Unity.InputSystem (a unity package for the input system)
- *               
- * Variables:   
- *      _cameraTransform: Reference viewpoint, required for transform of input from screenspace to worldspace
- *      _angleCorrection: Due to rounding error in transform from screenspace to worldspace, script locks 
- *                          rotation for a small window. Too large a value leaves a noticeable pause when 
- *                          rotating continuously.
- *              
- * Properties:  
- *      MoveStick (Vector2):        Raw stick value from input system.
- *      MoveDirection (Vector3):    Transformed stick value in the world space relative to the reference camera 
- *                                      direction.
- *      Jump (bool):                Bool indicating if the jump button is pressed or not.
- *      Sprint (bool):              Bool indicating if the sprint button is pressed or not.
- *      Crouch (bool):              Bool indicating if the crouch button is pressed or not.
- *      Roll (bool):                Bool indicating if the roll button is pressed or not.
- *      Angle (float):              Angle between the Camera direction and the MoveDirection vector.
- */
-
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEditor;
 
 namespace ProceduralCharacter.Movement
 {
+    /// <summary>
+    /// Takes input from the Input System of Unity and translates directional input relative to camera direction.
+    /// </summary>
     public class MovementInterpreter : MonoBehaviour, ThirdPersonControls.IMovementActions
     {
         #region Variables (private)
-        // Take inputs and make modified results available for other components
         [SerializeField, Tooltip("The transform of the main camera.")]
         private Transform _cameraTransform;
         [SerializeField, Tooltip("The z value of a direction vector, where the script corrects for angle calculation error.")]
-        [Range(-1f, -0.8f)]
-        private float _angleCorrection = -0.88f;
+        [Range(-1f, -0.9f)]
+        private float _angleCorrection = -0.98f;
+
+        [Space]
+        [SerializeField]
+        bool _showDebug = false;
 
         private ThirdPersonControls _moveControls;
 
@@ -82,52 +61,55 @@ namespace ProceduralCharacter.Movement
         //Some Debug Drawings
         private void OnDrawGizmos()
         {
-            float GizmoRadius = 1f;
-            Vector3 stick = new Vector3(_moveStick.x, 0f, _moveStick.y) * GizmoRadius;
-            Vector3 stickPos = stick + transform.position;
-            float stickAngle = Vector3.Angle(Vector3.forward, stick.normalized) *
-                (Vector3.Cross(stick.normalized, Vector3.forward).y >= 0f ? -1f : 1f);
-            Vector3 camDir = _cameraTransform.forward;
-            camDir.y = 0f;
-            camDir = camDir.normalized;
-            Vector3 correctionDir = new Vector3(1 + _angleCorrection, 0f, _angleCorrection).normalized;
-            Vector3 antiCorrectionDir = new Vector3((1 + _angleCorrection) * -1f, 0f, _angleCorrection).normalized;
-
-            //Draw a Circle
-            Gizmos.color = Color.grey;
-            for (int i = 0; i < 18; i++)
+            if (_showDebug)
             {
-                Vector3 start = new Vector3(Mathf.Cos(Mathf.Deg2Rad * (i * 20)) * GizmoRadius, 0, Mathf.Sin(Mathf.Deg2Rad * (i * 20)) * GizmoRadius);
-                Vector3 end = new Vector3(Mathf.Cos(Mathf.Deg2Rad * ((i + 1) * 20)) * GizmoRadius, 0, Mathf.Sin(Mathf.Deg2Rad * ((i + 1) * 20)) * GizmoRadius);
+                float GizmoRadius = 1f;
+                Vector3 stick = new Vector3(_moveStick.x, 0f, _moveStick.y) * GizmoRadius;
+                Vector3 stickPos = stick + transform.position;
+                float stickAngle = Vector3.Angle(Vector3.forward, stick.normalized) *
+                    (Vector3.Cross(stick.normalized, Vector3.forward).y >= 0f ? -1f : 1f);
+                Vector3 camDir = _cameraTransform.forward;
+                camDir.y = 0f;
+                camDir = camDir.normalized;
+                Vector3 correctionDir = new Vector3(1 + _angleCorrection, 0f, _angleCorrection).normalized;
+                Vector3 antiCorrectionDir = new Vector3((1 + _angleCorrection) * -1f, 0f, _angleCorrection).normalized;
 
-                Gizmos.DrawLine(start + transform.position, end + transform.position);
+                //Draw a Circle
+                Gizmos.color = Color.grey;
+                for (int i = 0; i < 18; i++)
+                {
+                    Vector3 start = new Vector3(Mathf.Cos(Mathf.Deg2Rad * (i * 20)) * GizmoRadius, 0, Mathf.Sin(Mathf.Deg2Rad * (i * 20)) * GizmoRadius);
+                    Vector3 end = new Vector3(Mathf.Cos(Mathf.Deg2Rad * ((i + 1) * 20)) * GizmoRadius, 0, Mathf.Sin(Mathf.Deg2Rad * ((i + 1) * 20)) * GizmoRadius);
+
+                    Gizmos.DrawLine(start + transform.position, end + transform.position);
+                }
+
+                //Draw moveStick
+                Gizmos.color = Color.grey;
+                Gizmos.DrawSphere(stickPos, 0.1f);
+                Gizmos.DrawLine(transform.position, stickPos);
+                Gizmos.DrawLine(transform.position, Vector3.forward + transform.position);
+
+                //Draw moveDirection
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawWireSphere(transform.position + (_moveDirection * GizmoRadius), 0.11f);
+                Gizmos.DrawLine(transform.position, transform.position + (_moveDirection * GizmoRadius));
+
+                //Draw CameraDirection
+                Gizmos.color = Color.red;
+                Vector3 interior = transform.position + camDir * (GizmoRadius - 0.2f);
+                Vector3 exterior = transform.position + camDir * (GizmoRadius + 0.2f);
+                interior.y = transform.position.y;
+                exterior.y = transform.position.y;
+                Gizmos.DrawLine(interior + _cameraTransform.right * 0.05f, exterior + _cameraTransform.right * 0.1f);
+                Gizmos.DrawLine(interior + _cameraTransform.right * -0.05f, exterior + _cameraTransform.right * -0.1f);
+                Gizmos.DrawLine(interior + _cameraTransform.right * 0.05f, interior + _cameraTransform.right * -0.05f);
+                Gizmos.DrawLine(exterior + _cameraTransform.right * 0.1f, exterior + _cameraTransform.right * -0.1f);
+
+                //Draw Correction range
+                Gizmos.DrawLine(transform.position + (correctionDir * (GizmoRadius - 0.2f)), transform.position + (correctionDir * (GizmoRadius + 0.2f)));
+                Gizmos.DrawLine(transform.position + (antiCorrectionDir * (GizmoRadius - 0.2f)), transform.position + (antiCorrectionDir * (GizmoRadius + 0.2f)));
             }
-
-            //Draw moveStick
-            Gizmos.color = Color.grey;
-            Gizmos.DrawSphere(stickPos, 0.1f);
-            Gizmos.DrawLine(transform.position, stickPos);
-            Gizmos.DrawLine(transform.position, Vector3.forward + transform.position);
-
-            //Draw moveDirection
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(transform.position + (_moveDirection * GizmoRadius), 0.11f);
-            Gizmos.DrawLine(transform.position, transform.position + (_moveDirection * GizmoRadius));
-
-            //Draw CameraDirection
-            Gizmos.color = Color.red;
-            Vector3 interior = transform.position + camDir * (GizmoRadius - 0.2f);
-            Vector3 exterior = transform.position + camDir * (GizmoRadius + 0.2f);
-            interior.y = transform.position.y;
-            exterior.y = transform.position.y;
-            Gizmos.DrawLine(interior + _cameraTransform.right * 0.05f, exterior + _cameraTransform.right * 0.1f);
-            Gizmos.DrawLine(interior + _cameraTransform.right * -0.05f, exterior + _cameraTransform.right * -0.1f);
-            Gizmos.DrawLine(interior + _cameraTransform.right * 0.05f, interior + _cameraTransform.right * -0.05f);
-            Gizmos.DrawLine(exterior + _cameraTransform.right * 0.1f, exterior + _cameraTransform.right * -0.1f);
-
-            //Draw Correction range
-            Gizmos.DrawLine(transform.position + (correctionDir * (GizmoRadius - 0.2f)), transform.position + (correctionDir * (GizmoRadius + 0.2f)));
-            Gizmos.DrawLine(transform.position + (antiCorrectionDir * (GizmoRadius - 0.2f)), transform.position + (antiCorrectionDir * (GizmoRadius + 0.2f)));
         }
         #endregion
 
