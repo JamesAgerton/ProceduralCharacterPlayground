@@ -8281,10 +8281,10 @@ MonoBehaviour:
   _ground:
     serializedVersion: 2
     m_Bits: 1
-  _drawStepSmoothGizmo: 0
+  _drawStepSmoothGizmo: 1
   _checks: 4
-  _angleRange: 60
-  _maxSpeed: 12
+  _angleRange: 30
+  _maxSpeed: 6
   FloatEnable: 1
   FloatEnableLock: 0
   RideHeightMultiplier: 1
@@ -8350,7 +8350,7 @@ MonoBehaviour:
   _animator: {fileID: 1314768802}
   SlowTime: 0
   TimeScale: 0.1
-  _drawStrideWheel: 1
+  _drawStrideWheel: 0
   _strideWeightCurve:
     serializedVersion: 2
     m_Curve:
@@ -8643,7 +8643,7 @@ CapsuleCollider:
   m_Material: {fileID: 13400000, guid: c2815a7ab32e42c4bb42f59caacb8ec1, type: 2}
   m_IsTrigger: 0
   m_Enabled: 1
-  m_Radius: 0.35
+  m_Radius: 0.38
   m_Height: 1.1
   m_Direction: 1
   m_Center: {x: 0, y: 0.25, z: 0}

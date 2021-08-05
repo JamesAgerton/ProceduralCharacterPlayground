@@ -84,8 +84,6 @@ namespace ProceduralCharacter.Movement
             if (dir.magnitude > _turnThreshold)
             {
                 _uprightRotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
-
-
             }
 
             //Rotate based on rotation of the object under the player's feet
@@ -139,7 +137,7 @@ namespace ProceduralCharacter.Movement
 
             float rotRadians = rotDegrees * Mathf.Deg2Rad;
 
-            _RB.AddTorque((rotAxis * rotRadians * _torqueStrength) - (_RB.angularVelocity * _torqueDamping));
+            _RB.AddTorque(((rotAxis * rotRadians * _torqueStrength) - (_RB.angularVelocity * _torqueDamping)));
         }
         Quaternion ShortestRotation(Quaternion a, Quaternion b)
         {
