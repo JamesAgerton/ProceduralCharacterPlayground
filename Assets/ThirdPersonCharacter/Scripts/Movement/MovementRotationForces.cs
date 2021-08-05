@@ -84,6 +84,8 @@ namespace ProceduralCharacter.Movement
             if (dir.magnitude > _turnThreshold)
             {
                 _uprightRotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+
+
             }
 
             //Rotate based on rotation of the object under the player's feet
