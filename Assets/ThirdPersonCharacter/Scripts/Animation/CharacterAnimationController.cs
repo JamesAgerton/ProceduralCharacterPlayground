@@ -63,7 +63,8 @@ namespace ProceduralCharacter.Animation
         #endregion
 
         #region Properties (PUBLIC)
-
+        public float StrideFraction => _strideFraction;
+        public bool IsMoving => _MC.IsMoving;
         #endregion
 
         #region Unity Methods
@@ -105,6 +106,7 @@ namespace ProceduralCharacter.Animation
             {
                 Time.timeScale = 1f;
             }
+
             HandlePose();
         }
 
