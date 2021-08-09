@@ -57,6 +57,9 @@ ModelImporter:
   - first:
       74: 7752005512060118970
     second: Armature|WalkStrafeReach
+  - first:
+      74: -1417542127430825849
+    second: Armature|WalkPassR (1)
   externalObjects: {}
   materials:
     materialImportMode: 1
