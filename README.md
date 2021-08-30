@@ -1,2 +1,8 @@
 # ProceduralCharacterPlayground
-Still a work in progress. I've set this down for a little while but I'll come back to it soon enough.
+Still a work in progress. I've set this down for a little while but I'll come back to it soon enough. Currently I'm looking into switching engines, so I may not clean this up for awhile, but it is in a mostly working state. It just isn't easy for someone other than me to know what the heck I've done. That I think is going to be the goal next: Package up this project nicely so others can use/learn from it.
+
+This project is a longwinded attempt to follow the advice of David Rosin (Developer of the game Overgrowth and Receiver) in [this talk](https://www.youtube.com/watch?v=LNidsMesxSE&t=611s). He explains how a system of keyframes can be procedurally blended to create a full animation system. The idea is to reduce the animation work required to add additional animations, such as adjusting the walk animation to take into account carrying something. Instead of creating a whole new suite of animations, you just crank out another set of the adjusted keyframes and plug them into the system and it takes care of the rest.
+
+In my attempt, I use a floating rigidbody as the base character controller and add forces to calculate movement. Then I drape the animated skeletal mesh over that to create a convincing animated character using only a dozen or so keyframes all driven in C# scripts.
+
+In the end though I'm not sure it really reduced the amount of work required, but it did work. One great advantage of this is that it takes away the fiddly work of matching walk animations to a character's movement speed. Instead, movement speed drives the keyframe blend. I think this produces a very good effect with minimal fiddly work to get working well.
